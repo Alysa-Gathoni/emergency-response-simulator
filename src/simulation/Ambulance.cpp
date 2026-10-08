@@ -1,0 +1,106 @@
+#include "Ambulance.h"
+#include "../core/Color.h"
+#include <cmath>
+
+namespace {
+constexpr float PI = 3.14159265358979323846f;
+}
+
+Ambulance::Ambulance(Point startPosition)
+    : body_({
+        {startPosition.x - 30, startPosition.y - 16},
+        {startPosition.x + 30, startPosition.y - 16},
+        {startPosition.x + 30, startPosition.y + 16},
+        {startPosition.x - 30, startPosition.y + 16}
+      }),
+      cabin_({
+        {startPosition.x + 5, startPosition.y - 13},
+        {startPosition.x + 27, startPosition.y - 13},
+        {startPosition.x + 27, startPosition.y + 13},
+        {startPosition.x + 5, startPosition.y + 13}
+      }),
+      position_(startPosition) {}
+
+void Ambulance::move(float distance) {
+    const float radians = headingDegrees_ * PI / 180.0f;
+    const float dx = std::cos(radians) * distance;
+    const float dy = std::sin(radians) * distance;
+
+    body_.translate(dx, dy);
+    cabin_.translate(dx, dy);
+    position_.x += dx;
+    position_.y += dy;
+}
+
+void Ambulance::turn(float degrees) {
+    headingDegrees_ += degrees;
+    body_.rotate(degrees, position_);
+    cabin_.rotate(degrees, position_);
+
+    if (headingDegrees_ >= 360.0f) headingDegrees_ -= 360.0f;
+    if (headingDegrees_ < 0.0f) headingDegrees_ += 360.0f;
+}
+
+void Ambulance::handleInput(float deltaTime) {
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+        move(moveSpeed_ * deltaTime);
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+        move(-moveSpeed_ * deltaTime);
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+        turn(-turnSpeed_ * deltaTime);
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+        turn(turnSpeed_ * deltaTime);
+}
+
+void Ambulance::update(float deltaTime) {
+    handleInput(deltaTime);
+}
+
+void Ambulance::draw(sf::RenderTarget& target,
+                     const LineRenderer& lines,
+                     bool debug) const {
+    body_.drawOutline(target, lines, Colors::Ambulance, 3.0f);
+    cabin_.drawOutline(target, lines, Colors::AmbulanceAccent, 2.0f);
+
+    // Medical cross rotates with the vehicle by constructing two small
+    // local segments and rotating their endpoints around the ambulance.
+    const float radians = headingDegrees_ * PI / 180.0f;
+    const float c = std::cos(radians);
+    const float s = std::sin(radians);
+
+    auto localToWorld = [&](float lx, float ly) {
+        return Point{
+            position_.x + lx * c - ly * s,
+            position_.y + lx * s + ly * c
+        };
+    };
+
+    lines.draw(target, localToWorld(-8,0), localToWorld(8,0),
+               Colors::AmbulanceAccent, 3.0f);
+    lines.draw(target, localToWorld(0,-8), localToWorld(0,8),
+               Colors::AmbulanceAccent, 3.0f);
+
+    if (debug) {
+        body_.drawVertices(target, Colors::Debug);
+        cabin_.drawVertices(target, Colors::Debug);
+
+        sf::CircleShape centre(5.0f);
+        centre.setOrigin(5.0f,5.0f);
+        centre.setPosition(position_.x, position_.y);
+        centre.setFillColor(Colors::Debug);
+        target.draw(centre);
+
+        const Point headingEnd = localToWorld(50,0);
+        lines.draw(target, position_, headingEnd, Colors::Debug, 2.0f);
+    }
+}
+
+Point Ambulance::position() const { return position_; }
+float Ambulance::heading() const { return headingDegrees_; }

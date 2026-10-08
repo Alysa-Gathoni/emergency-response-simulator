@@ -1,31 +1,56 @@
 #include <SFML/Graphics.hpp>
-#include <string>
+#include "core/Color.h"
+#include "lines/LineRenderer.h"
 #include "city/City.h"
+#include "simulation/Ambulance.h"
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(960, 640), "Emergency Response Simulator - Chunk 1");
+    sf::RenderWindow window(
+        sf::VideoMode(900, 700),
+        "Emergency Response Simulator - Chunk 2"
+    );
     window.setFramerateLimit(60);
+
+    LineRenderer lineRenderer(LineMode::Bresenham);
     City city;
-    bool lWasDown = false, gWasDown = false;
+    Ambulance ambulance({150.0f, 310.0f});
+
+    bool graphicsDebug = false;
+    sf::Clock clock;
 
     while (window.isOpen()) {
         sf::Event event{};
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
-        }
-        const bool lDown = sf::Keyboard::isKeyPressed(sf::Keyboard::L);
-        if (lDown && !lWasDown) city.setAlgorithm(city.algorithm() == LineAlgorithm::Bresenham ? LineAlgorithm::DDA : LineAlgorithm::Bresenham);
-        lWasDown = lDown;
-        const bool gDown = sf::Keyboard::isKeyPressed(sf::Keyboard::G);
-        if (gDown && !gWasDown) city.setDebug(!city.debug());
-        gWasDown = gDown;
+            if (event.type == sf::Event::Closed)
+                window.close();
 
-        const std::string algorithm = city.algorithm() == LineAlgorithm::Bresenham ? "Bresenham" : "DDA";
-        window.setTitle("Emergency Response Simulator | Chunk 1 | " + algorithm + " | L: algorithm  G: debug  Esc: quit");
-        window.clear(sf::Color(30, 38, 43));
-        city.draw(window);
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Escape)
+                    window.close();
+
+                if (event.key.code == sf::Keyboard::L) {
+                    lineRenderer.setMode(
+                        lineRenderer.getMode() == LineMode::Bresenham
+                            ? LineMode::DDA
+                            : LineMode::Bresenham
+                    );
+                }
+
+                if (event.key.code == sf::Keyboard::G) {
+                    graphicsDebug = !graphicsDebug;
+                    lineRenderer.setDebug(graphicsDebug);
+                }
+            }
+        }
+
+        const float deltaTime = clock.restart().asSeconds();
+        ambulance.update(deltaTime);
+
+        window.clear(Colors::Background);
+        city.draw(window, lineRenderer, graphicsDebug);
+        ambulance.draw(window, lineRenderer, graphicsDebug);
         window.display();
     }
+
     return 0;
 }

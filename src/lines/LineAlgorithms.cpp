@@ -1,38 +1,66 @@
-#include "lines/LineAlgorithms.h"
+#include "LineAlgorithms.h"
 #include <algorithm>
 #include <cmath>
-#include <cstdlib>
 
-std::vector<Point> LineAlgorithms::dda(int x0, int y0, int x1, int y1) {
+namespace LineAlgorithms {
+
+std::vector<Point> dda(Point start, Point end) {
     std::vector<Point> points;
-    const int dx = x1 - x0;
-    const int dy = y1 - y0;
-    const int steps = std::max(std::abs(dx), std::abs(dy));
-    if (steps == 0) return {{x0, y0}};
-    const float xInc = static_cast<float>(dx) / steps;
-    const float yInc = static_cast<float>(dy) / steps;
-    float x = static_cast<float>(x0), y = static_cast<float>(y0);
-    points.reserve(static_cast<std::size_t>(steps + 1));
-    for (int i = 0; i <= steps; ++i) {
-        points.push_back({static_cast<int>(std::lround(x)), static_cast<int>(std::lround(y))});
-        x += xInc; y += yInc;
+
+    const float dx = end.x - start.x;
+    const float dy = end.y - start.y;
+    const int steps = static_cast<int>(std::max(std::abs(dx), std::abs(dy)));
+
+    if (steps == 0) {
+        points.push_back(start);
+        return points;
     }
+
+    const float xIncrement = dx / steps;
+    const float yIncrement = dy / steps;
+
+    float x = start.x;
+    float y = start.y;
+
+    for (int i = 0; i <= steps; ++i) {
+        points.emplace_back(std::round(x), std::round(y));
+        x += xIncrement;
+        y += yIncrement;
+    }
+
     return points;
 }
 
-std::vector<Point> LineAlgorithms::bresenham(int x0, int y0, int x1, int y1) {
+std::vector<Point> bresenham(Point start, Point end) {
     std::vector<Point> points;
-    const int dx = std::abs(x1 - x0);
-    const int sx = x0 < x1 ? 1 : -1;
-    const int dy = -std::abs(y1 - y0);
-    const int sy = y0 < y1 ? 1 : -1;
+
+    int x1 = static_cast<int>(std::round(start.x));
+    int y1 = static_cast<int>(std::round(start.y));
+    const int x2 = static_cast<int>(std::round(end.x));
+    const int y2 = static_cast<int>(std::round(end.y));
+
+    const int dx = std::abs(x2 - x1);
+    const int sx = x1 < x2 ? 1 : -1;
+    const int dy = -std::abs(y2 - y1);
+    const int sy = y1 < y2 ? 1 : -1;
     int error = dx + dy;
+
     while (true) {
-        points.push_back({x0, y0});
-        if (x0 == x1 && y0 == y1) break;
-        const int e2 = 2 * error;
-        if (e2 >= dy) { error += dy; x0 += sx; }
-        if (e2 <= dx) { error += dx; y0 += sy; }
+        points.emplace_back(static_cast<float>(x1), static_cast<float>(y1));
+        if (x1 == x2 && y1 == y2) break;
+
+        const int doubledError = 2 * error;
+        if (doubledError >= dy) {
+            error += dy;
+            x1 += sx;
+        }
+        if (doubledError <= dx) {
+            error += dx;
+            y1 += sy;
+        }
     }
+
     return points;
+}
+
 }
