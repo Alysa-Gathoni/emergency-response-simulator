@@ -1,5 +1,6 @@
 #include "Ambulance.h"
 #include "../core/Color.h"
+#include "../rasterization/PolygonFill.h"
 #include <cmath>
 
 namespace {
@@ -66,6 +67,10 @@ void Ambulance::update(float deltaTime) {
 void Ambulance::draw(sf::RenderTarget& target,
                      const LineRenderer& lines,
                      bool debug) const {
+    PolygonFill::draw(target, body_.vertices(), lines,
+                      sf::Color(225,225,225), false);
+    PolygonFill::draw(target, cabin_.vertices(), lines,
+                      sf::Color(160,45,45), false);
     body_.drawOutline(target, lines, Colors::Ambulance, 3.0f);
     cabin_.drawOutline(target, lines, Colors::AmbulanceAccent, 2.0f);
 

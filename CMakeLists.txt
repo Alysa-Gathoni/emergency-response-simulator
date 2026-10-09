@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(EmergencyResponseSimulator VERSION 0.2.0 LANGUAGES CXX)
+project(EmergencyResponseSimulator VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,8 +12,11 @@ add_executable(EmergencyResponseSimulator
     src/lines/LineRenderer.cpp
     src/polygons/Transformations.cpp
     src/polygons/Polygon.cpp
+    src/rasterization/PolygonFill.cpp
+    src/rasterization/Clipping.cpp
     src/city/City.cpp
     src/simulation/Ambulance.cpp
+    src/simulation/ClippingDemo.cpp
 )
 
 target_include_directories(EmergencyResponseSimulator PRIVATE src)

@@ -3,19 +3,22 @@
 #include "lines/LineRenderer.h"
 #include "city/City.h"
 #include "simulation/Ambulance.h"
+#include "simulation/ClippingDemo.h"
 
 int main() {
     sf::RenderWindow window(
         sf::VideoMode(900, 700),
-        "Emergency Response Simulator - Chunk 2"
+        "Emergency Response Simulator - Chunk 3"
     );
     window.setFramerateLimit(60);
 
     LineRenderer lineRenderer(LineMode::Bresenham);
     City city;
     Ambulance ambulance({150.0f, 310.0f});
+    ClippingDemo clippingDemo;
 
     bool graphicsDebug = false;
+    bool clippingDebug = false;
     sf::Clock clock;
 
     while (window.isOpen()) {
@@ -40,6 +43,9 @@ int main() {
                     graphicsDebug = !graphicsDebug;
                     lineRenderer.setDebug(graphicsDebug);
                 }
+
+                if (event.key.code == sf::Keyboard::C)
+                    clippingDebug = !clippingDebug;
             }
         }
 
@@ -49,6 +55,7 @@ int main() {
         window.clear(Colors::Background);
         city.draw(window, lineRenderer, graphicsDebug);
         ambulance.draw(window, lineRenderer, graphicsDebug);
+        clippingDemo.draw(window, lineRenderer, clippingDebug);
         window.display();
     }
 
