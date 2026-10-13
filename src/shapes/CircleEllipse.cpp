@@ -1,5 +1,8 @@
 #include "CircleEllipse.h"
+#include "../core/Raster.h"
+#include <algorithm>
 #include <cmath>
+#include <map>
 
 namespace {
 
@@ -21,6 +24,30 @@ void addEllipseSymmetry(std::vector<Point>& points,
     points.push_back({c.x - x, c.y + y});
     points.push_back({c.x + x, c.y - y});
     points.push_back({c.x - x, c.y - y});
+}
+
+// Circles and ellipses are convex, so every row of the outline has exactly
+// one interior span between its minimum and maximum x.
+std::vector<Point> fillOutlineRows(const std::vector<Point>& outline) {
+    std::map<long, std::pair<float, float>> rows;
+
+    for (const Point& p : outline) {
+        const long y = std::lround(p.y);
+        auto it = rows.find(y);
+        if (it == rows.end()) {
+            rows[y] = {p.x, p.x};
+        } else {
+            it->second.first = std::min(it->second.first, p.x);
+            it->second.second = std::max(it->second.second, p.x);
+        }
+    }
+
+    std::vector<Point> pixels;
+    for (const auto& [y, span] : rows) {
+        for (float x = span.first; x <= span.second; x += 1.0f)
+            pixels.push_back({x, static_cast<float>(y)});
+    }
+    return pixels;
 }
 
 }
@@ -106,17 +133,19 @@ std::vector<Point> midpointEllipse(Point center, int radiusX, int radiusY) {
     return points;
 }
 
+std::vector<Point> filledCircle(Point center, int radius) {
+    return fillOutlineRows(midpointCircle(center, radius));
+}
+
+std::vector<Point> filledEllipse(Point center, int radiusX, int radiusY) {
+    return fillOutlineRows(midpointEllipse(center, radiusX, radiusY));
+}
+
 void drawPoints(sf::RenderTarget& target,
                 const std::vector<Point>& points,
                 sf::Color color,
                 float pixelSize) {
-    sf::RectangleShape pixel({pixelSize, pixelSize});
-    pixel.setFillColor(color);
-
-    for (const Point& p : points) {
-        pixel.setPosition(p.x, p.y);
-        target.draw(pixel);
-    }
+    Raster::plot(target, points, color, pixelSize);
 }
 
 }

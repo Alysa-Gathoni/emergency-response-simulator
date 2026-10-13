@@ -1,5 +1,6 @@
 #include "Polygon.h"
 #include "Transformations.h"
+#include "../core/Raster.h"
 
 Polygon::Polygon(std::vector<Point> vertices)
     : vertices_(std::move(vertices)) {}
@@ -56,12 +57,6 @@ void Polygon::drawOutline(sf::RenderTarget& target,
 }
 
 void Polygon::drawVertices(sf::RenderTarget& target, sf::Color color) const {
-    sf::CircleShape marker(4.0f);
-    marker.setOrigin(4.0f, 4.0f);
-    marker.setFillColor(color);
-
-    for (const Point& p : vertices_) {
-        marker.setPosition(p.x, p.y);
-        target.draw(marker);
-    }
+    for (const Point& p : vertices_)
+        Raster::marker(target, p, 4.0f, color);
 }

@@ -7,11 +7,12 @@
 #include "simulation/Ambulance.h"
 #include "simulation/ClippingDemo.h"
 #include "simulation/EmergencyMarker.h"
+#include "simulation/TrafficSystem.h"
 
 int main() {
     sf::RenderWindow window(
         sf::VideoMode(900, 700),
-        "Emergency Response Simulator - Chunk 4"
+        "Emergency Response Simulator - Chunk 5"
     );
     window.setFramerateLimit(60);
 
@@ -22,9 +23,11 @@ int main() {
     ClippingDemo clippingDemo;
     TrafficLight trafficLight({505.0f, 220.0f});
     EmergencyMarker emergency({700.0f, 535.0f});
+    TrafficSystem traffic;
 
     bool graphicsDebug = false;
     bool clippingDebug = false;
+    bool curveDebug = false;
     sf::Clock clock;
 
     while (window.isOpen()) {
@@ -52,6 +55,9 @@ int main() {
 
                 if (event.key.code == sf::Keyboard::C)
                     clippingDebug = !clippingDebug;
+
+                if (event.key.code == sf::Keyboard::B)
+                    curveDebug = !curveDebug;
             }
         }
 
@@ -60,6 +66,7 @@ int main() {
         ambulance.update(deltaTime);
         trafficLight.update(deltaTime);
         emergency.update(deltaTime);
+        traffic.update(deltaTime);
 
         window.clear(Colors::Background);
 
@@ -67,6 +74,7 @@ int main() {
         environment.draw(window, graphicsDebug);
         trafficLight.draw(window, lineRenderer, graphicsDebug);
         emergency.draw(window, graphicsDebug);
+        traffic.draw(window, lineRenderer, curveDebug);
         ambulance.draw(window, lineRenderer, graphicsDebug);
         clippingDemo.draw(window, lineRenderer, clippingDebug);
 

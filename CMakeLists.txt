@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(EmergencyResponseSimulator VERSION 0.4.0 LANGUAGES CXX)
+project(EmergencyResponseSimulator VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,12 +15,17 @@ add_executable(EmergencyResponseSimulator
     src/rasterization/PolygonFill.cpp
     src/rasterization/Clipping.cpp
     src/shapes/CircleEllipse.cpp
+    src/curves/Bezier.cpp
+    src/curves/Spline.cpp
+    src/curves/CatmullRom.cpp
     src/city/City.cpp
     src/city/TrafficLight.cpp
     src/city/Environment.cpp
     src/simulation/Ambulance.cpp
     src/simulation/ClippingDemo.cpp
     src/simulation/EmergencyMarker.cpp
+    src/simulation/TrafficVehicle.cpp
+    src/simulation/TrafficSystem.cpp
 )
 
 target_include_directories(EmergencyResponseSimulator PRIVATE src)

@@ -1,5 +1,4 @@
 #include "Clipping.h"
-#include <functional>
 
 namespace {
 
@@ -72,6 +71,58 @@ std::vector<Point> clipAgainst(
 }
 
 namespace Clipping {
+
+namespace {
+constexpr int Inside = 0;
+constexpr int Left   = 1;
+constexpr int Right  = 2;
+constexpr int Top    = 4;
+constexpr int Bottom = 8;
+
+int outCode(const Point& p, const ClipRect& r) {
+    int code = Inside;
+    if (p.x < r.left)        code |= Left;
+    else if (p.x > r.right)  code |= Right;
+    if (p.y < r.top)         code |= Top;
+    else if (p.y > r.bottom) code |= Bottom;
+    return code;
+}
+}
+
+bool cohenSutherland(Point& a, Point& b, const ClipRect& rect) {
+    int codeA = outCode(a, rect);
+    int codeB = outCode(b, rect);
+
+    while (true) {
+        if ((codeA | codeB) == 0) return true;   // trivially accepted
+        if ((codeA & codeB) != 0) return false;  // trivially rejected
+
+        // Pick an endpoint that is outside and move it onto the
+        // boundary edge indicated by its region code.
+        const int outside = codeA != 0 ? codeA : codeB;
+        const float dx = b.x - a.x;
+        const float dy = b.y - a.y;
+        Point p;
+
+        if (outside & Top) {
+            p = {a.x + dx * (rect.top - a.y) / dy, rect.top};
+        } else if (outside & Bottom) {
+            p = {a.x + dx * (rect.bottom - a.y) / dy, rect.bottom};
+        } else if (outside & Right) {
+            p = {rect.right, a.y + dy * (rect.right - a.x) / dx};
+        } else {
+            p = {rect.left, a.y + dy * (rect.left - a.x) / dx};
+        }
+
+        if (outside == codeA) {
+            a = p;
+            codeA = outCode(a, rect);
+        } else {
+            b = p;
+            codeB = outCode(b, rect);
+        }
+    }
+}
 
 std::vector<Point> sutherlandHodgman(
     const std::vector<Point>& polygon,

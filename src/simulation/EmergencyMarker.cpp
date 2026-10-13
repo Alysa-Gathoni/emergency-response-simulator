@@ -22,9 +22,9 @@ void EmergencyMarker::draw(sf::RenderTarget& target, bool debug) const {
 
     ShapeAlgorithms::drawPoints(
         target,
-        ShapeAlgorithms::midpointCircle(position_, 7),
+        ShapeAlgorithms::filledCircle(position_, 7),
         sf::Color(255,210,80),
-        2.0f
+        1.0f
     );
 
     if (debug) {

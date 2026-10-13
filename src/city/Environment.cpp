@@ -7,18 +7,26 @@ void Environment::draw(sf::RenderTarget& target, bool debug) const {
     };
 
     for (Point p : treePositions) {
+        // Canopy: filled midpoint ellipse with a darker outline.
+        ShapeAlgorithms::drawPoints(
+            target,
+            ShapeAlgorithms::filledEllipse(p, 18, 27),
+            sf::Color(55,130,70),
+            1.0f
+        );
         ShapeAlgorithms::drawPoints(
             target,
             ShapeAlgorithms::midpointEllipse(p, 18, 27),
-            sf::Color(80,165,95),
-            3.0f
+            sf::Color(40,100,55),
+            2.0f
         );
 
+        // Highlight: filled midpoint circle.
         ShapeAlgorithms::drawPoints(
             target,
-            ShapeAlgorithms::midpointCircle({p.x - 8, p.y - 6}, 10),
+            ShapeAlgorithms::filledCircle({p.x - 6, p.y - 8}, 8),
             sf::Color(95,185,105),
-            2.0f
+            1.0f
         );
 
         if (debug) {

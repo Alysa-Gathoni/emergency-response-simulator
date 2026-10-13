@@ -48,16 +48,16 @@ void TrafficLight::draw(sf::RenderTarget& target,
     const sf::Color off(75,75,75);
 
     ShapeAlgorithms::drawPoints(
-        target, ShapeAlgorithms::midpointCircle(red, 7),
-        signal_ == TrafficSignal::Red ? sf::Color(235,70,70) : off, 2.0f);
+        target, ShapeAlgorithms::filledCircle(red, 7),
+        signal_ == TrafficSignal::Red ? sf::Color(235,70,70) : off, 1.0f);
 
     ShapeAlgorithms::drawPoints(
-        target, ShapeAlgorithms::midpointCircle(yellow, 7),
-        signal_ == TrafficSignal::Yellow ? sf::Color(240,205,70) : off, 2.0f);
+        target, ShapeAlgorithms::filledCircle(yellow, 7),
+        signal_ == TrafficSignal::Yellow ? sf::Color(240,205,70) : off, 1.0f);
 
     ShapeAlgorithms::drawPoints(
-        target, ShapeAlgorithms::midpointCircle(green, 7),
-        signal_ == TrafficSignal::Green ? sf::Color(80,215,105) : off, 2.0f);
+        target, ShapeAlgorithms::filledCircle(green, 7),
+        signal_ == TrafficSignal::Green ? sf::Color(80,215,105) : off, 1.0f);
 
     if (debug) {
         for (Point p : {red, yellow, green}) {

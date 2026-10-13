@@ -1,7 +1,6 @@
 #include "City.h"
 #include "../core/Color.h"
 #include "../rasterization/PolygonFill.h"
-#include "../rasterization/Clipping.h"
 
 City::City() {
     buildings_.emplace_back(std::vector<Point>{{55,55},{250,55},{250,190},{55,190}});
@@ -29,15 +28,15 @@ void City::drawRoads(sf::RenderTarget& target, const LineRenderer& lines) const 
 void City::draw(sf::RenderTarget& target,
                 const LineRenderer& lines,
                 bool polygonDebug) const {
-    sf::RectangleShape horizontalRoad({900.0f,120.0f});
-    horizontalRoad.setPosition(0,250);
-    horizontalRoad.setFillColor(Colors::Road);
-    target.draw(horizontalRoad);
-
-    sf::RectangleShape verticalRoad({140.0f,700.0f});
-    verticalRoad.setPosition(330,0);
-    verticalRoad.setFillColor(Colors::Road);
-    target.draw(verticalRoad);
+    // Road surfaces are polygons filled with our scan-line algorithm.
+    const std::vector<Point> horizontalRoad = {
+        {0,250}, {900,250}, {900,370}, {0,370}
+    };
+    const std::vector<Point> verticalRoad = {
+        {330,0}, {470,0}, {470,700}, {330,700}
+    };
+    PolygonFill::draw(target, horizontalRoad, lines, Colors::Road, false);
+    PolygonFill::draw(target, verticalRoad, lines, Colors::Road, false);
 
     drawRoads(target, lines);
 

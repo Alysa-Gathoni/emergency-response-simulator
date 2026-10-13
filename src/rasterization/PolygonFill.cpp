@@ -1,4 +1,5 @@
 #include "PolygonFill.h"
+#include "../core/Raster.h"
 #include <algorithm>
 #include <cmath>
 
@@ -60,14 +61,19 @@ void draw(sf::RenderTarget& target,
           bool debug) {
     const auto spans = scanLineSpans(vertices);
 
-    for (std::size_t i = 0; i < spans.size(); ++i) {
-        sf::Color spanColor = color;
-        if (debug && i % 8 == 0)
-            spanColor = sf::Color(80, 220, 170);
+    // Every span is rasterized with our line algorithm, then all pixels are
+    // submitted in one batch. In debug mode every 8th span is highlighted.
+    std::vector<Point> pixels;
+    std::vector<Point> highlighted;
 
-        renderer.draw(target, spans[i].first, spans[i].second,
-                      spanColor, 1.0f);
+    for (std::size_t i = 0; i < spans.size(); ++i) {
+        const auto row = renderer.rasterize(spans[i].first, spans[i].second);
+        auto& bucket = (debug && i % 8 == 0) ? highlighted : pixels;
+        bucket.insert(bucket.end(), row.begin(), row.end());
     }
+
+    Raster::plot(target, pixels, color, 1.0f);
+    Raster::plot(target, highlighted, sf::Color(80, 220, 170), 1.0f);
 }
 
 }
