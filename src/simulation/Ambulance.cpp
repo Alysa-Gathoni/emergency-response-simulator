@@ -171,8 +171,12 @@ void Ambulance::drive(const DrivingInput& input, float deltaTime) {
 }
 
 void Ambulance::update(float deltaTime) {
+    update(deltaTime, readKeyboard());
+}
+
+void Ambulance::update(float deltaTime, const DrivingInput& input) {
     time_ += deltaTime;
-    drive(readKeyboard(), deltaTime);
+    drive(input, deltaTime);
     syncModel();
 }
 

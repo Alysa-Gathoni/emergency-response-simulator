@@ -30,6 +30,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/Collision.cpp
     src/simulation/CollisionSystem.cpp
     src/simulation/EmergencyMarker.cpp
+    src/simulation/Mission.cpp
     src/simulation/SceneNode.cpp
     src/simulation/TrafficRules.cpp
     src/simulation/TrafficVehicle.cpp

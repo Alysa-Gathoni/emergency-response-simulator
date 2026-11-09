@@ -32,6 +32,7 @@ public:
     explicit Ambulance(Point startPosition);
 
     void update(float deltaTime);
+    void update(float deltaTime, const DrivingInput& input);
 
     // Reads the keyboard (W/S or arrows, A/D, Space) into a DrivingInput.
     static DrivingInput readKeyboard();
