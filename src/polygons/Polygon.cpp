@@ -23,12 +23,14 @@ Point Polygon::centroid() const {
     return {x / vertices_.size(), y / vertices_.size()};
 }
 
+// Each operation builds its homogeneous matrix and goes through transform(),
+// so all polygon transformations share one code path.
 void Polygon::translate(float dx, float dy) {
-    vertices_ = Transformations::translate(vertices_, dx, dy);
+    transform(Mat3::translation(dx, dy));
 }
 
 void Polygon::rotate(float degrees, Point pivot) {
-    vertices_ = Transformations::rotate(vertices_, degrees, pivot);
+    transform(Mat3::aboutPivot(Mat3::rotationDegrees(degrees), pivot));
 }
 
 void Polygon::rotate(float degrees) {
@@ -36,11 +38,19 @@ void Polygon::rotate(float degrees) {
 }
 
 void Polygon::scale(float sx, float sy, Point pivot) {
-    vertices_ = Transformations::scale(vertices_, sx, sy, pivot);
+    transform(Mat3::aboutPivot(Mat3::scaling(sx, sy), pivot));
 }
 
 void Polygon::scale(float sx, float sy) {
     scale(sx, sy, centroid());
+}
+
+void Polygon::transform(const Mat3& matrix) {
+    vertices_ = Transformations::transform(vertices_, matrix);
+}
+
+Polygon Polygon::transformed(const Mat3& matrix) const {
+    return Polygon(matrix.apply(vertices_));
 }
 
 void Polygon::drawOutline(sf::RenderTarget& target,
