@@ -19,11 +19,17 @@ public:
                                      bool closed);
 
     void addSegment(const BezierSegment& segment);
+    void setSegments(std::vector<BezierSegment> segments);
 
     // progress in [0, 1) maps to [0, length()) along the path.
     Point evaluate(float progress) const;
     Point tangent(float progress) const;
     float length() const;
+
+    // Same lookups by distance travelled along the path (wraps around).
+    Point pointAtDistance(float distance) const;
+    // Unit tangent (direction of travel) at a distance along the path.
+    Point directionAtDistance(float distance) const;
 
     std::vector<Point> sampledPoints(int segmentsPerCurve = 60) const;
     const std::vector<BezierSegment>& segments() const;

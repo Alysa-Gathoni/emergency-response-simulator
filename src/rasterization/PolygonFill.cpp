@@ -59,20 +59,32 @@ void draw(sf::RenderTarget& target,
           const LineRenderer& renderer,
           sf::Color color,
           bool debug) {
-    const auto spans = scanLineSpans(vertices);
+    auto spans = scanLineSpans(vertices);
 
-    // Every span is rasterized with our line algorithm, then all pixels are
-    // submitted in one batch. In debug mode every 8th span is highlighted.
-    std::vector<Point> pixels;
-    std::vector<Point> highlighted;
+    // Spans whose rounded ends cross (slivers thinner than a pixel) are empty.
+    spans.erase(std::remove_if(spans.begin(), spans.end(),
+                               [](const auto& s) { return s.second.x < s.first.x; }),
+                spans.end());
 
-    for (std::size_t i = 0; i < spans.size(); ++i) {
-        const auto row = renderer.rasterize(spans[i].first, spans[i].second);
-        auto& bucket = (debug && i % 8 == 0) ? highlighted : pixels;
-        bucket.insert(bucket.end(), row.begin(), row.end());
+    if (!debug) {
+        Raster::spans(target, spans, color);
+        return;
     }
 
-    Raster::plot(target, pixels, color, 1.0f);
+    // Debug view: every 8th span is rasterized pixel by pixel with the
+    // selected line algorithm and highlighted, so the scan lines are visible.
+    std::vector<std::pair<Point, Point>> plain;
+    std::vector<Point> highlighted;
+    for (std::size_t i = 0; i < spans.size(); ++i) {
+        if (i % 8 == 0) {
+            const auto row = renderer.rasterize(spans[i].first, spans[i].second);
+            highlighted.insert(highlighted.end(), row.begin(), row.end());
+        } else {
+            plain.push_back(spans[i]);
+        }
+    }
+
+    Raster::spans(target, plain, color);
     Raster::plot(target, highlighted, sf::Color(80, 220, 170), 1.0f);
 }
 

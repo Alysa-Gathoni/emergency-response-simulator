@@ -32,7 +32,7 @@ Testing and final delivery are shared responsibilities.
 
 - **C++17**: all graphics algorithms are implemented by hand
 - **SFML 2.5 / 2.6** (not 3.x): used only to open a window, read keyboard input and receive our computed pixels in one batch (`src/core/Raster.h`). SFML does not compute any lines, fills, clipping, circles or curves, and no SFML shape classes are used.
-- **CMake 3.16+**: build system
+- **CMake 3.16+ / CTest**: build system and unit tests
 - **Git / GitHub**: version control, issues and collaboration
 
 ## Graphics Techniques Implemented So Far
@@ -41,15 +41,28 @@ Testing and final delivery are shared responsibilities.
 |---|---|---|---|
 | Line drawing | DDA, Bresenham (toggle with **L**) | `src/lines/` | Road edges, lane markings, crosswalks, all outlines |
 | Polygon representation & operations | Vertex-list polygons; translation, rotation and scaling about a pivot | `src/polygons/` | Buildings, hospital, ambulance and civilian vehicles; ambulance movement and turning |
-| Polygon filling | Scan-line fill (half-open edge rule) | `src/rasterization/PolygonFill.cpp` | Road surfaces, buildings, hospital and vehicles |
+| Polygon filling | Scan-line fill (half-open edge rule); spans submitted to SFML in one batch | `src/rasterization/PolygonFill.cpp` | Road surfaces, buildings, hospital, vehicles, signal housings |
 | Line clipping | Cohen–Sutherland (region outcodes) | `src/rasterization/Clipping.cpp` | Viewport clipping demo (toggle with **C**) |
 | Polygon clipping | Sutherland–Hodgman against a rectangular viewport | `src/rasterization/Clipping.cpp` | Viewport clipping demo (toggle with **C**) |
-| Circles & ellipses | Midpoint circle, midpoint ellipse; solid versions filled row by row from the midpoint outline | `src/shapes/` | Solid wheels, traffic-light bulbs, tree canopies, pulsing incident marker |
-| Curves | Cubic Bézier; Catmull-Rom spline (converted to Bézier segments); arc-length parameterisation | `src/curves/` | Civilian traffic routes at constant speed; vehicles face along the curve tangent (`atan2(dy, dx)`) |
+| Circles & ellipses | Midpoint circle, midpoint ellipse; solid versions filled row by row from the midpoint outline | `src/shapes/` | Solid wheels, 16 signal heads with three bulbs each, tree canopies, pulsing incident marker, camera flash |
+| Curves | Cubic Bézier; Catmull-Rom spline (converted to Bézier segments); arc-length parameterisation | `src/curves/` | Traffic routes at constant speed; quarter-circle Bézier corners at every turn; vehicles face along the tangent (`atan2(dy, dx)`) |
+| Signal control | Finite state machine per intersection with timing offsets | `src/city/SignalController.*` | Four coordinated intersections |
+| Traffic behaviour | Stopping distance v² = 2·b·d, yellow dilemma zone, safe-gap following | `src/simulation/TrafficRules.*` | Civilian vehicles stop at red, queue and keep their distance |
+| Segment intersection | Line-segment crossing test | `src/city/RedLightCamera.*` | Counting red lights run by the ambulance |
+
+### Traffic and intersections
+
+- A 2×2 grid of four signalised intersections on a 1100×720 map; roads are 140 px wide with two lanes. Every module derives its geometry from `RoadNetwork`, so the map is defined once.
+- **Left-hand traffic** as in Kenya: the lane centre is the road centre plus `leftOf(direction) * 35`, where `leftOf(dx, dy) = (dy, -dx)` in screen coordinates.
+- Each intersection runs its own signal state machine: `NS green (8 s) → NS yellow (2.5 s) → all red (1.5 s) → EW green → EW yellow → all red`. Neighbouring intersections are offset by 0, 8, 8 and 16 s, so the lights do not all change together.
+- Civilian vehicles use the stopping relation **v² = 2·b·d**. A red light means stop. A yellow light means stop only if `v²/2b` fits before the stop line; otherwise the vehicle is in the dilemma zone and carries on. Vehicles follow a leader at `v = √(vL² + 2·b·gap)` and check a corridor ahead for the ambulance.
+- Turns are cubic Bézier corners with control points 0.5523·r towards the corner (quarter-circle approximation). Left turns are tight and right turns wide, purely from the lane offsets.
+- Traffic mix: 60% cars, 25% matatus (stop for 2.5 s at kerbside stages), 15% motorcycles; spawned from a fixed seed so runs are repeatable.
+- The ambulance is never forced to stop, but a red-light camera counts every stop line it crosses on red.
 
 Debug views show the algorithms working live:
 
-- **G**: polygon vertices, scan-line spans, the ambulance centre and its heading vector
+- **G**: polygon vertices and scan-line spans, the ambulance centre and heading, stop lines in their signal colour, and each car's target-speed vector coloured by what is limiting it (free road, corner, signal, leader or stage)
 - **C**: original polygon and line segments (grey) and their clipped results
 - **B**: spline paths, Bézier control polygons and control points, and Catmull-Rom knots (magenta)
 
@@ -63,9 +76,10 @@ src/
 ├── rasterization/ Scan-line fill, Cohen–Sutherland and Sutherland–Hodgman clipping
 ├── shapes/        Midpoint circle and ellipse
 ├── curves/        Cubic Bézier, Catmull-Rom, arc-length spline paths
-├── city/          City layout, traffic light, environment (trees)
-├── simulation/    Ambulance, civilian traffic, incident marker, clipping demo
+├── city/          Road network, signal controllers, traffic lights, red-light camera, city layout, trees
+├── simulation/    Ambulance, civilian traffic and its rules, vehicle types, incident marker, clipping demo
 └── main.cpp       Main loop
+tests/             Unit tests for the signals and traffic rules (run with ctest)
 ```
 
 ## How to Compile and Run
@@ -78,6 +92,7 @@ cd build
 cmake ..
 cmake --build .
 ./EmergencyResponseSimulator
+ctest -C Debug          # unit tests
 ```
 
 On Windows, the executable is built in `build/Debug/` or `build/`, depending on the generator. The SFML DLLs must be next to the `.exe` or on the `PATH`.
@@ -98,23 +113,30 @@ On Windows, the executable is built in `build/Debug/` or `build/`, depending on 
 
 ## Current Progress
 
-Phase 1 (graphics foundation) is complete. The city renders entirely with our own algorithms. The trainee can drive and turn the ambulance. A traffic light cycles through its states, an incident marker pulses at the destination, and three civilian vehicles follow Bézier spline routes.
+Phase 1 (graphics foundation) is complete. The city renders entirely with our own algorithms.
+
+**Checkpoint 2: traffic and intersections are complete.**
+
+- Four signalised intersections with stop lines, zebra crossings and 16 signal heads
+- Civilian traffic that stops at red, decides on yellow, queues with a safe gap and turns on Bézier corners in the correct lane
+- Cars, matatus (with stages) and motorcycles
+- Red-light camera counting violations by the ambulance
+- Wide 140 px roads so the ambulance can be driven comfortably
+- Unit tests for the signal state machines, lane geometry and traffic rules
 
 ### Next phases
 
+- Transformation matrices and a hierarchical ambulance model with a proper driving model
 - Collision detection between the ambulance, buildings and vehicles
-- Incident generation with triage priority and target response times
-- Destination detection, response timer and assessment/debrief screen
-- Traffic-light interaction and civilian vehicles yielding to the siren
-- Pathfinding (Dijkstra / A*) to show the optimal route in the debrief
-- HUD showing incident type, distance, time and assessment
-- A larger district with more intersections and matatus/motorcycles
+- Incidents with time limits, arrival detection and route guidance
+- Pedestrians at the crossings and a day/night cycle
+- HUD showing incident type, distance, time and counters
 
 ## Known Limitations and Issues
 
 - No collision detection yet: the ambulance can drive through buildings and other vehicles.
-- Civilian traffic ignores the traffic light and the ambulance.
+- Vehicles turning inside a junction do not yet yield to each other, so a brief overlap can occur rarely.
 - The incident location is fixed, and there is no timer, assessment or HUD yet.
 - Clipping is shown as a demonstration (key **C**) but is not yet used for a scrolling camera.
-- The map is a single fixed screen (900×700) with one main intersection.
+- The map is a single fixed screen (1100×720) with four intersections; there is no camera yet.
 - Built against SFML 2.x; SFML 3 changed its API and is not supported yet.

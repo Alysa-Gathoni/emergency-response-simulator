@@ -2,8 +2,9 @@
 #include "../shapes/CircleEllipse.h"
 
 void Environment::draw(sf::RenderTarget& target, bool debug) const {
+    // Trees stand in the two parks of the district.
     const Point treePositions[] = {
-        {285,110}, {510,115}, {285,520}, {510,540}, {835,520}
+        {60,642}, {124,670}, {190,646}, {1014,50}, {1058,84}
     };
 
     for (Point p : treePositions) {

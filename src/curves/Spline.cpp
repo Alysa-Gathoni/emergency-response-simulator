@@ -18,6 +18,11 @@ void SplinePath::addSegment(const BezierSegment& segment) {
     rebuildArcTable();
 }
 
+void SplinePath::setSegments(std::vector<BezierSegment> segments) {
+    segments_ = std::move(segments);
+    rebuildArcTable();
+}
+
 // Samples every segment and stores the cumulative chord length, giving a
 // lookup table from distance travelled to (segment, t).
 void SplinePath::rebuildArcTable() {
@@ -72,6 +77,19 @@ Point SplinePath::tangent(float progress) const {
     Point a = evaluate(progress);
     Point b = evaluate(progress + epsilon);
     return {b.x - a.x, b.y - a.y};
+}
+
+Point SplinePath::pointAtDistance(float distance) const {
+    const float total = length();
+    return total > 0.0f ? evaluate(distance / total) : Point{};
+}
+
+Point SplinePath::directionAtDistance(float distance) const {
+    const Point a = pointAtDistance(distance - 1.0f);
+    const Point b = pointAtDistance(distance + 1.0f);
+    const float len = std::hypot(b.x - a.x, b.y - a.y);
+    if (len <= 0.0f) return {1.0f, 0.0f};
+    return {(b.x - a.x) / len, (b.y - a.y) / len};
 }
 
 float SplinePath::length() const {
