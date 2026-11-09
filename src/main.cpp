@@ -9,7 +9,7 @@
 #include "simulation/Ambulance.h"
 #include "simulation/ClippingDemo.h"
 #include "simulation/CollisionSystem.h"
-#include "simulation/EmergencyMarker.h"
+#include "simulation/Mission.h"
 #include "simulation/TrafficSystem.h"
 
 int main() {
@@ -20,14 +20,16 @@ int main() {
     );
     window.setFramerateLimit(60);
 
+    const Point startPosition{420.0f, 175.0f};   // outside the hospital
+
     LineRenderer lineRenderer(LineMode::Bresenham);
     RoadNetwork network;
     City city(network);
     Environment environment;
     TrafficLights trafficLights(network);
-    Ambulance ambulance({420.0f, 175.0f});
+    Ambulance ambulance(startPosition);
     ClippingDemo clippingDemo;
-    EmergencyMarker emergency({700.0f, 545.0f});
+    Mission mission;
     TrafficSystem traffic(network);
     RedLightCamera redLightCamera(network, trafficLights);
     CollisionSystem collisions;
@@ -65,25 +67,39 @@ int main() {
 
                 if (event.key.code == sf::Keyboard::B)
                     curveDebug = !curveDebug;
+
+                if (event.key.code == sf::Keyboard::R) {
+                    // Restart: ambulance back at the hospital, traffic and
+                    // signals back to their starting state, counters cleared.
+                    ambulance.resetTo(startPosition, 0.0f);
+                    traffic.reset();
+                    trafficLights.reset();
+                    collisions.reset();
+                    redLightCamera.reset();
+                    mission.restart(startPosition);
+                }
             }
         }
 
         const float deltaTime = clock.restart().asSeconds();
 
         const Point beforeMove = ambulance.position();
-        ambulance.update(deltaTime);
+        // Driving keys only count while the window has focus (the
+        // keyboard state is global, so other apps would steer otherwise).
+        ambulance.update(deltaTime, window.hasFocus() ? Ambulance::readKeyboard()
+                                                      : DrivingInput{});
         redLightCamera.update(beforeMove, ambulance.position(), deltaTime);
         trafficLights.update(deltaTime);
-        emergency.update(deltaTime);
         traffic.update(deltaTime, trafficLights, {ambulance.footprint()});
         collisions.update(ambulance, city, traffic, deltaTime);
+        mission.update(deltaTime, ambulance.position(), ambulance.speed());
 
         window.clear(Colors::Background);
 
         city.draw(window, lineRenderer, graphicsDebug);
         environment.draw(window, graphicsDebug);
         trafficLights.draw(window, lineRenderer, graphicsDebug);
-        emergency.draw(window, graphicsDebug);
+        mission.draw(window, lineRenderer, graphicsDebug);
         traffic.draw(window, lineRenderer, curveDebug, graphicsDebug);
         ambulance.draw(window, lineRenderer, graphicsDebug);
         redLightCamera.draw(window, lineRenderer);

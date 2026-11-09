@@ -16,7 +16,7 @@ void EmergencyMarker::draw(sf::RenderTarget& target, bool debug) const {
     ShapeAlgorithms::drawPoints(
         target,
         ShapeAlgorithms::midpointCircle(position_, radius),
-        sf::Color(235,70,70),
+        colour_,
         3.0f
     );
 
@@ -39,4 +39,13 @@ void EmergencyMarker::draw(sf::RenderTarget& target, bool debug) const {
 
 Point EmergencyMarker::position() const {
     return position_;
+}
+
+void EmergencyMarker::setPosition(Point position) {
+    position_ = position;
+    phase_ = 0.0f;
+}
+
+void EmergencyMarker::setColour(sf::Color colour) {
+    colour_ = colour;
 }
