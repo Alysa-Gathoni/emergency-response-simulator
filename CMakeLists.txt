@@ -8,6 +8,7 @@ find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
 add_executable(EmergencyResponseSimulator
     src/main.cpp
+    src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
     src/polygons/Transformations.cpp
@@ -65,3 +66,10 @@ add_executable(test_traffic_rules
 )
 target_include_directories(test_traffic_rules PRIVATE src)
 add_test(NAME traffic_rules COMMAND test_traffic_rules)
+
+add_executable(test_mat3
+    tests/test_mat3.cpp
+    src/core/Mat3.cpp
+)
+target_include_directories(test_mat3 PRIVATE src)
+add_test(NAME mat3 COMMAND test_mat3)

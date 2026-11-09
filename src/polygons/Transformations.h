@@ -2,6 +2,8 @@
 #include <vector>
 #include "../core/Point.h"
 
+struct Mat3;
+
 namespace Transformations {
     std::vector<Point> translate(const std::vector<Point>& vertices,
                                  float dx, float dy);
@@ -11,4 +13,8 @@ namespace Transformations {
 
     std::vector<Point> scale(const std::vector<Point>& vertices,
                              float sx, float sy, Point pivot);
+
+    // Applies one composite matrix to every vertex.
+    std::vector<Point> transform(const std::vector<Point>& vertices,
+                                 const Mat3& matrix);
 }
