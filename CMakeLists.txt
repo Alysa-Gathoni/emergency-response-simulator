@@ -74,3 +74,19 @@ add_executable(test_mat3
 )
 target_include_directories(test_mat3 PRIVATE src)
 add_test(NAME mat3 COMMAND test_mat3)
+
+add_executable(test_driving
+    tests/test_driving.cpp
+    src/simulation/Ambulance.cpp
+    src/simulation/SceneNode.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_driving PRIVATE src)
+target_link_libraries(test_driving sfml-graphics sfml-window sfml-system)
+add_test(NAME driving COMMAND test_driving)

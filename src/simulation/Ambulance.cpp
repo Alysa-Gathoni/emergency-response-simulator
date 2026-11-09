@@ -11,14 +11,33 @@ constexpr float WheelRadius = 6.0f;
 
 // Driving model parameters (pixels, seconds).
 constexpr float Wheelbase = 36.0f;          // front to rear axle
-constexpr float MaxForward = 190.0f;
-constexpr float MaxReverse = -70.0f;
-constexpr float Acceleration = 150.0f;
-constexpr float BrakeDecel = 300.0f;
+constexpr float MaxForward = 140.0f;         // ~100 km/h on the HUD scale
+constexpr float MaxReverse = -60.0f;
+constexpr float Acceleration = 115.0f;
+constexpr float BrakeDecel = 320.0f;
 constexpr float HandbrakeDecel = 560.0f;
-constexpr float RollingDrag = 45.0f;         // coasting slow-down
-constexpr float SteerRate = 3.0f;           // rad/s the wheels can turn
+constexpr float RollingDrag = 60.0f;         // coasting slow-down
+constexpr float SteerRate = 3.5f;            // rad/s the wheels can turn
+constexpr float SteerReturnRate = 6.0f;      // faster self-centring on release
+
+// Speed-sensitive steering: full lock is reduced as speed rises,
+//     maxSteer(v) = MaxSteer / (1 + |v| / SteerFade)
+// so the turning radius L / tan(maxSteer) grows with speed instead of
+// staying at its tightest value (which made high speed twitchy).
+constexpr float SteerFade = 110.0f;
+
+// Heading assist: with no steering input, a heading within AssistWindow
+// of a road direction (0, 90, 180, 270 degrees) is eased onto it, so the
+// ambulance straightens up after a turn instead of drifting into kerbs.
+constexpr float AssistWindow = 14.0f;        // degrees
+constexpr float AssistRate = 40.0f;          // degrees per second at speed
 }
+
+float Ambulance::maxSteerAt(float speed) {
+    return MaxSteer / (1.0f + std::abs(speed) / SteerFade);
+}
+
+float Ambulance::topSpeed() { return MaxForward; }
 
 Ambulance::Ambulance(Point startPosition) : position_(startPosition) {
     buildModel();
@@ -122,13 +141,25 @@ void Ambulance::drive(const DrivingInput& input, float deltaTime) {
     speed_ = std::clamp(speed_, MaxReverse, MaxForward);
 
     // 2. Steering: the wheels move towards the input at a limited rate.
-    const float target = std::clamp(input.steer, -1.0f, 1.0f) * MaxSteer;
-    const float rate = SteerRate * deltaTime;
+    const float steerInput = std::clamp(input.steer, -1.0f, 1.0f);
+    const float limit = maxSteerAt(speed_);
+    const float target = steerInput * limit;
+    const float rate = (steerInput == 0.0f ? SteerReturnRate : SteerRate) * deltaTime;
     steer_ += std::clamp(target - steer_, -rate, rate);
+    steer_ = std::clamp(steer_, -limit, limit);
 
     // 3. Bicycle model: heading rate = v / L * tan(steer).
     const float headingRate = speed_ / Wheelbase * std::tan(steer_);
     headingDegrees_ += headingRate * deltaTime * 180.0f / PI;
+
+    if (steerInput == 0.0f && std::abs(speed_) > 10.0f) {
+        const float road = std::round(headingDegrees_ / 90.0f) * 90.0f;
+        const float offset = road - headingDegrees_;
+        if (std::abs(offset) < AssistWindow) {
+            const float step = AssistRate * std::min(1.0f, std::abs(speed_) / 60.0f) * deltaTime;
+            headingDegrees_ += std::clamp(offset, -step, step);
+        }
+    }
     headingDegrees_ = std::fmod(headingDegrees_ + 360.0f, 360.0f);
 
     // 4. Move along the new heading; wheels roll by distance / radius.
