@@ -1,6 +1,4 @@
 #include <SFML/Graphics.hpp>
-#include <cmath>
-#include <vector>
 #include "core/Color.h"
 #include "lines/LineRenderer.h"
 #include "city/RoadNetwork.h"
@@ -12,23 +10,6 @@
 #include "simulation/ClippingDemo.h"
 #include "simulation/EmergencyMarker.h"
 #include "simulation/TrafficSystem.h"
-
-namespace {
-
-// Corners of the ambulance body (60 x 32) from its pose, so civilian
-// traffic can see it in its forward corridor.
-std::vector<Point> ambulanceFootprint(const Ambulance& ambulance) {
-    const float a = ambulance.heading() * 3.14159265f / 180.0f;
-    const Point c = ambulance.position();
-    const Point d{std::cos(a), std::sin(a)};
-    std::vector<Point> corners;
-    for (auto [lx, ly] : {std::pair{-30.0f, -16.0f}, {30.0f, -16.0f},
-                          {30.0f, 16.0f}, {-30.0f, 16.0f}})
-        corners.push_back({c.x + lx * d.x - ly * d.y, c.y + lx * d.y + ly * d.x});
-    return corners;
-}
-
-}
 
 int main() {
     sf::RenderWindow window(
@@ -92,7 +73,7 @@ int main() {
         redLightCamera.update(beforeMove, ambulance.position(), deltaTime);
         trafficLights.update(deltaTime);
         emergency.update(deltaTime);
-        traffic.update(deltaTime, trafficLights, {ambulanceFootprint(ambulance)});
+        traffic.update(deltaTime, trafficLights, {ambulance.footprint()});
 
         window.clear(Colors::Background);
 

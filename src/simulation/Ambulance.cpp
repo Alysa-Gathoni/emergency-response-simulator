@@ -8,6 +8,16 @@ namespace {
 constexpr float PI = 3.14159265358979323846f;
 constexpr float MaxSteer = 30.0f * PI / 180.0f;
 constexpr float WheelRadius = 6.0f;
+
+// Driving model parameters (pixels, seconds).
+constexpr float Wheelbase = 36.0f;          // front to rear axle
+constexpr float MaxForward = 190.0f;
+constexpr float MaxReverse = -70.0f;
+constexpr float Acceleration = 150.0f;
+constexpr float BrakeDecel = 300.0f;
+constexpr float HandbrakeDecel = 560.0f;
+constexpr float RollingDrag = 45.0f;         // coasting slow-down
+constexpr float SteerRate = 3.0f;           // rad/s the wheels can turn
 }
 
 Ambulance::Ambulance(Point startPosition) : position_(startPosition) {
@@ -54,6 +64,9 @@ void Ambulance::buildModel() {
     beam->fill = sf::Color(120, 170, 255, 170);
     beacon_->add(std::move(beam));
     beacon_->add(makeDisc("beacon-core", {0, 0}, 2, sf::Color(200, 220, 255)));
+
+    brakeLights_[0] = root_->add(makeRect("brake-left", -31, -14, -28, -9, sf::Color(90, 20, 20)));
+    brakeLights_[1] = root_->add(makeRect("brake-right", -31, 9, -28, 14, sf::Color(90, 20, 20)));
 }
 
 void Ambulance::syncModel() {
@@ -72,55 +85,85 @@ void Ambulance::syncModel() {
     blueLight_->fill = phase ? sf::Color(25, 35, 90) : sf::Color(70, 120, 255);
 
     beacon_->children.front()->local = Mat3::rotation(time_ * 6.0f);
+
+    for (SceneNode* light : brakeLights_)
+        light->fill = braking_ ? sf::Color(255, 50, 40) : sf::Color(90, 20, 20);
 }
 
-void Ambulance::move(float distance) {
+DrivingInput Ambulance::readKeyboard() {
+    using K = sf::Keyboard;
+    DrivingInput in;
+    if (K::isKeyPressed(K::W) || K::isKeyPressed(K::Up))    in.throttle += 1.0f;
+    if (K::isKeyPressed(K::S) || K::isKeyPressed(K::Down))  in.throttle -= 1.0f;
+    if (K::isKeyPressed(K::A) || K::isKeyPressed(K::Left))  in.steer -= 1.0f;
+    if (K::isKeyPressed(K::D) || K::isKeyPressed(K::Right)) in.steer += 1.0f;
+    in.handbrake = K::isKeyPressed(K::Space);
+    return in;
+}
+
+void Ambulance::drive(const DrivingInput& input, float deltaTime) {
+    // 1. Longitudinal speed: accelerate, brake, reverse, coast.
+    braking_ = false;
+    if (input.handbrake) {
+        const float drop = HandbrakeDecel * deltaTime;
+        speed_ = std::abs(speed_) <= drop ? 0.0f : speed_ - std::copysign(drop, speed_);
+        braking_ = true;
+    } else if (input.throttle > 0.0f) {
+        if (speed_ < 0.0f) { speed_ += BrakeDecel * deltaTime; braking_ = true; }
+        else speed_ += Acceleration * input.throttle * deltaTime;
+    } else if (input.throttle < 0.0f) {
+        // S brakes while rolling forwards, then engages reverse.
+        if (speed_ > 0.0f) { speed_ -= BrakeDecel * deltaTime; braking_ = true; }
+        else speed_ += Acceleration * 0.6f * input.throttle * deltaTime;
+    } else {
+        const float drop = RollingDrag * deltaTime;
+        speed_ = std::abs(speed_) <= drop ? 0.0f : speed_ - std::copysign(drop, speed_);
+    }
+    speed_ = std::clamp(speed_, MaxReverse, MaxForward);
+
+    // 2. Steering: the wheels move towards the input at a limited rate.
+    const float target = std::clamp(input.steer, -1.0f, 1.0f) * MaxSteer;
+    const float rate = SteerRate * deltaTime;
+    steer_ += std::clamp(target - steer_, -rate, rate);
+
+    // 3. Bicycle model: heading rate = v / L * tan(steer).
+    const float headingRate = speed_ / Wheelbase * std::tan(steer_);
+    headingDegrees_ += headingRate * deltaTime * 180.0f / PI;
+    headingDegrees_ = std::fmod(headingDegrees_ + 360.0f, 360.0f);
+
+    // 4. Move along the new heading; wheels roll by distance / radius.
     const float radians = headingDegrees_ * PI / 180.0f;
+    const float distance = speed_ * deltaTime;
     position_.x += std::cos(radians) * distance;
     position_.y += std::sin(radians) * distance;
-
-    // Rolling without slipping: angle = arc length / radius.
     wheelSpin_ += distance / WheelRadius;
-}
-
-void Ambulance::turn(float degrees) {
-    headingDegrees_ += degrees;
-    if (headingDegrees_ >= 360.0f) headingDegrees_ -= 360.0f;
-    if (headingDegrees_ < 0.0f) headingDegrees_ += 360.0f;
-}
-
-void Ambulance::handleInput(float deltaTime) {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-        move(moveSpeed_ * deltaTime);
-
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-        move(-moveSpeed_ * deltaTime);
-
-    float steerInput = 0.0f;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-        turn(-turnSpeed_ * deltaTime);
-        steerInput -= 1.0f;
-    }
-
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-        turn(turnSpeed_ * deltaTime);
-        steerInput += 1.0f;
-    }
-
-    // Front wheels swing towards the input, clamped to +-30 degrees.
-    const float target = steerInput * MaxSteer;
-    const float rate = 4.0f * deltaTime;
-    steer_ += std::clamp(target - steer_, -rate, rate);
 }
 
 void Ambulance::update(float deltaTime) {
     time_ += deltaTime;
-    handleInput(deltaTime);
+    drive(readKeyboard(), deltaTime);
     syncModel();
+}
+
+void Ambulance::resolveCollision(Point separation) {
+    position_.x += separation.x;
+    position_.y += separation.y;
+    // Bounce back slightly: reverse a third of the speed.
+    speed_ = -speed_ * 0.3f;
+    syncModel();
+}
+
+void Ambulance::resetTo(Point position, float headingDegrees) {
+    position_ = position;
+    headingDegrees_ = headingDegrees;
+    speed_ = 0.0f;
+    steer_ = 0.0f;
+    syncModel();
+}
+
+std::vector<Point> Ambulance::footprint() const {
+    return root_->local.apply(std::vector<Point>{
+        {-30, -16}, {30, -16}, {30, 16}, {-30, 16}});
 }
 
 void Ambulance::draw(sf::RenderTarget& target,
@@ -140,3 +183,5 @@ void Ambulance::draw(sf::RenderTarget& target,
 Point Ambulance::position() const { return position_; }
 float Ambulance::heading() const { return headingDegrees_; }
 float Ambulance::steerAngle() const { return steer_; }
+float Ambulance::speed() const { return speed_; }
+bool Ambulance::braking() const { return braking_; }
