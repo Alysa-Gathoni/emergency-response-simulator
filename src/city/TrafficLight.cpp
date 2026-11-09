@@ -2,72 +2,106 @@
 #include "../shapes/CircleEllipse.h"
 #include "../polygons/Polygon.h"
 #include "../rasterization/PolygonFill.h"
+#include "../core/Color.h"
 
-TrafficLight::TrafficLight(Point position) : position_(position) {}
+namespace {
 
-void TrafficLight::advanceSignal() {
-    if (signal_ == TrafficSignal::Red)
-        signal_ = TrafficSignal::Green;
-    else if (signal_ == TrafficSignal::Green)
-        signal_ = TrafficSignal::Yellow;
-    else
-        signal_ = TrafficSignal::Red;
-
-    elapsed_ = 0.0f;
+sf::Color bulbColor(Signal lit, Signal bulb) {
+    if (lit != bulb) return sf::Color(70, 70, 70);
+    switch (bulb) {
+        case Signal::Red:    return sf::Color(235, 70, 70);
+        case Signal::Yellow: return sf::Color(240, 205, 70);
+        case Signal::Green:  return sf::Color(80, 215, 105);
+    }
+    return sf::Color::White;
 }
 
-void TrafficLight::update(float deltaTime) {
-    elapsed_ += deltaTime;
+Point offset(Point p, Point d, float s) { return {p.x + d.x * s, p.y + d.y * s}; }
 
-    float duration = 5.0f;
-    if (signal_ == TrafficSignal::Green) duration = 7.0f;
-    if (signal_ == TrafficSignal::Yellow) duration = 2.0f;
-
-    if (elapsed_ >= duration)
-        advanceSignal();
 }
 
-void TrafficLight::draw(sf::RenderTarget& target,
-                        const LineRenderer& lines,
-                        bool debug) const {
-    Polygon housing({
-        {position_.x - 13, position_.y - 34},
-        {position_.x + 13, position_.y - 34},
-        {position_.x + 13, position_.y + 34},
-        {position_.x - 13, position_.y + 34}
-    });
+TrafficLights::TrafficLights(const RoadNetwork& network)
+    : network_(network) {
+    reset();
+}
 
-    PolygonFill::draw(target, housing.vertices(), lines,
-                      sf::Color(30,30,30), false);
-    housing.drawOutline(target, lines, sf::Color(190,190,190), 2.0f);
+void TrafficLights::reset() {
+    // Offsets in seconds: the diagonal neighbours switch together and the
+    // others are shifted by a third of a cycle, so the grid never switches
+    // all at once and a vehicle often meets green at the next junction.
+    const float offsets[] = {0.0f, 8.0f, 8.0f, 16.0f};
+    const auto& nodes = network_.intersections();
+    controllers_.clear();
+    for (std::size_t i = 0; i < nodes.size(); ++i)
+        controllers_.emplace_back(offsets[i % 4]);
+}
 
-    const Point red{position_.x, position_.y - 21};
-    const Point yellow{position_.x, position_.y};
-    const Point green{position_.x, position_.y + 21};
+void TrafficLights::update(float deltaTime) {
+    for (auto& c : controllers_)
+        c.update(deltaTime);
+}
 
-    const sf::Color off(75,75,75);
+Signal TrafficLights::signalAt(int intersection, SignalGroup group) const {
+    return controllers_[static_cast<std::size_t>(intersection)].signalFor(group);
+}
 
-    ShapeAlgorithms::drawPoints(
-        target, ShapeAlgorithms::filledCircle(red, 7),
-        signal_ == TrafficSignal::Red ? sf::Color(235,70,70) : off, 1.0f);
+Signal TrafficLights::signalFor(const StopLine& stopLine) const {
+    return signalAt(stopLine.intersection, groupOf(stopLine.approach));
+}
 
-    ShapeAlgorithms::drawPoints(
-        target, ShapeAlgorithms::filledCircle(yellow, 7),
-        signal_ == TrafficSignal::Yellow ? sf::Color(240,205,70) : off, 1.0f);
+const SignalController& TrafficLights::controller(int intersection) const {
+    return controllers_[static_cast<std::size_t>(intersection)];
+}
 
-    ShapeAlgorithms::drawPoints(
-        target, ShapeAlgorithms::filledCircle(green, 7),
-        signal_ == TrafficSignal::Green ? sf::Color(80,215,105) : off, 1.0f);
+void TrafficLights::draw(sf::RenderTarget& target,
+                         const LineRenderer& lines,
+                         bool debug) const {
+    for (const StopLine& stop : network_.stopLines()) {
+        const Signal lit = signalFor(stop);
+        const Point d = headingVector(stop.approach);
+        const Point side = leftOf(d);
 
-    if (debug) {
-        for (Point p : {red, yellow, green}) {
-            ShapeAlgorithms::drawPoints(
-                target, ShapeAlgorithms::midpointCircle(p, 10),
-                sf::Color(80,220,170), 1.0f);
+        // Signal head on the left kerb, just before the stop line. The
+        // housing is built in the approach's local frame (d, side) so the
+        // three bulbs line up with the direction of travel.
+        const Point base = offset(stop.b, side, 12.0f);
+        const Point centre = offset(base, d, -14.0f);
+
+        Polygon housing({
+            offset(offset(centre, d, -16.0f), side, -7.0f),
+            offset(offset(centre, d,  16.0f), side, -7.0f),
+            offset(offset(centre, d,  16.0f), side,  7.0f),
+            offset(offset(centre, d, -16.0f), side,  7.0f)
+        });
+        PolygonFill::draw(target, housing.vertices(), lines,
+                          sf::Color(28, 28, 30), false);
+        housing.drawOutline(target, lines, sf::Color(170, 170, 170), 1.0f);
+
+        // Red nearest the junction, green furthest from it.
+        const Point red = offset(centre, d, 10.0f);
+        const Point green = offset(centre, d, -10.0f);
+        ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(red, 4),
+                                    bulbColor(lit, Signal::Red), 1.0f);
+        ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(centre, 4),
+                                    bulbColor(lit, Signal::Yellow), 1.0f);
+        ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(green, 4),
+                                    bulbColor(lit, Signal::Green), 1.0f);
+
+        if (debug) {
+            // Stop line coloured with the signal that governs it.
+            lines.draw(target, stop.a, stop.b, bulbColor(lit, lit), 3.0f);
         }
     }
-}
 
-TrafficSignal TrafficLight::signal() const {
-    return signal_;
+    if (!debug) return;
+
+    // Remaining time of the current phase as a shrinking bar per junction.
+    for (std::size_t i = 0; i < controllers_.size(); ++i) {
+        const auto& c = controllers_[i];
+        const Point centre = network_.intersections()[i].centre;
+        const float fraction = c.timeUntilChange() / c.phaseDuration(c.phase());
+        const Point start{centre.x - 30.0f, centre.y};
+        lines.draw(target, start, {start.x + 60.0f * fraction, start.y},
+                   Colors::Debug, 3.0f);
+    }
 }
