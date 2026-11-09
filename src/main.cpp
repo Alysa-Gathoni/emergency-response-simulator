@@ -8,6 +8,7 @@
 #include "city/Environment.h"
 #include "simulation/Ambulance.h"
 #include "simulation/ClippingDemo.h"
+#include "simulation/CollisionSystem.h"
 #include "simulation/EmergencyMarker.h"
 #include "simulation/TrafficSystem.h"
 
@@ -29,6 +30,7 @@ int main() {
     EmergencyMarker emergency({700.0f, 545.0f});
     TrafficSystem traffic(network);
     RedLightCamera redLightCamera(network, trafficLights);
+    CollisionSystem collisions;
 
     bool graphicsDebug = false;
     bool clippingDebug = false;
@@ -74,6 +76,7 @@ int main() {
         trafficLights.update(deltaTime);
         emergency.update(deltaTime);
         traffic.update(deltaTime, trafficLights, {ambulance.footprint()});
+        collisions.update(ambulance, city, traffic, deltaTime);
 
         window.clear(Colors::Background);
 
@@ -84,6 +87,7 @@ int main() {
         traffic.draw(window, lineRenderer, curveDebug, graphicsDebug);
         ambulance.draw(window, lineRenderer, graphicsDebug);
         redLightCamera.draw(window, lineRenderer);
+        collisions.draw(window, lineRenderer, graphicsDebug);
         clippingDemo.draw(window, lineRenderer, clippingDebug);
 
         window.display();
