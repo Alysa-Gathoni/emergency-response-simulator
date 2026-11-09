@@ -28,6 +28,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/Ambulance.cpp
     src/simulation/ClippingDemo.cpp
     src/simulation/EmergencyMarker.cpp
+    src/simulation/SceneNode.cpp
     src/simulation/TrafficRules.cpp
     src/simulation/TrafficVehicle.cpp
     src/simulation/TrafficSystem.cpp
