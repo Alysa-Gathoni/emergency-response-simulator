@@ -17,8 +17,10 @@
 //
 // Driving uses a simplified bicycle model: the heading changes at
 //     dHeading/dt = speed / wheelbase * tan(steerAngle)
-// so the turning radius grows with speed and the ambulance cannot spin
-// on the spot.
+// and the steering lock itself shrinks as speed rises, so the turning
+// radius grows with speed and the ambulance cannot spin on the spot.
+// With no steering input the heading is eased onto the nearest road
+// direction (small offsets only), which keeps it straight in its lane.
 struct DrivingInput {
     float throttle{0.0f};   // -1 (brake / reverse) .. 1 (accelerate)
     float steer{0.0f};      // -1 (left) .. 1 (right)
@@ -44,6 +46,10 @@ public:
     float steerAngle() const;       // radians, + = right
     float speed() const;            // px/s along the heading, < 0 reversing
     bool braking() const;
+
+    // Largest steering angle (radians) allowed at `speed` px/s.
+    static float maxSteerAt(float speed);
+    static float topSpeed();
 
     // Corners of the body in world space (for collisions and traffic).
     std::vector<Point> footprint() const;
