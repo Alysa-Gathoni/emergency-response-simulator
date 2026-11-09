@@ -27,6 +27,8 @@ add_executable(EmergencyResponseSimulator
     src/city/TrafficLight.cpp
     src/simulation/Ambulance.cpp
     src/simulation/ClippingDemo.cpp
+    src/simulation/Collision.cpp
+    src/simulation/CollisionSystem.cpp
     src/simulation/EmergencyMarker.cpp
     src/simulation/SceneNode.cpp
     src/simulation/TrafficRules.cpp
@@ -90,3 +92,10 @@ add_executable(test_driving
 target_include_directories(test_driving PRIVATE src)
 target_link_libraries(test_driving sfml-graphics sfml-window sfml-system)
 add_test(NAME driving COMMAND test_driving)
+
+add_executable(test_collision
+    tests/test_collision.cpp
+    src/simulation/Collision.cpp
+)
+target_include_directories(test_collision PRIVATE src)
+add_test(NAME collision COMMAND test_collision)
