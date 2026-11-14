@@ -1,5 +1,5 @@
 #include "Check.h"
-#include "city/RoadNetwork.h"
+#include "city/RoadGraph.h"
 #include "simulation/RouteGuide.h"
 #include <cmath>
 
@@ -16,8 +16,9 @@ bool contains(const std::vector<Point>& route, Point p) {
 
 void sameRoadGoesStraight() {
     RoadNetwork network = small();
+    RoadGraph graph(network);
     // Both on the y = 200 road, between the two junctions.
-    const auto route = RouteGuide::plan(network, {420, 175}, {560, 225});
+    const auto route = RouteGuide::plan(graph, {420, 175}, {560, 225});
     CHECK(route.size() == 4);                       // from, join, join, to
     CHECK_NEAR(RouteGuide::length(route), 25 + 140 + 25, 0.01f);
     CHECK(!contains(route, {300, 200}));
@@ -26,9 +27,10 @@ void sameRoadGoesStraight() {
 
 void turnsAtJunctions() {
     RoadNetwork network = small();
+    RoadGraph graph(network);
     // From the hospital road to the far bottom-left: west to (300,200),
     // south to (300,520), west to the incident.
-    const auto route = RouteGuide::plan(network, {420, 175}, {120, 545});
+    const auto route = RouteGuide::plan(graph, {420, 175}, {120, 545});
     CHECK(contains(route, {300, 200}));
     CHECK(contains(route, {300, 520}));
     CHECK(!contains(route, {800, 200}));
@@ -37,8 +39,9 @@ void turnsAtJunctions() {
 
 void picksTheShorterWay() {
     RoadNetwork network = small();
+    RoadGraph graph(network);
     // Start just east of (800,200); going via x = 800 is shorter than x = 300.
-    const auto route = RouteGuide::plan(network, {900, 200}, {980, 520});
+    const auto route = RouteGuide::plan(graph, {900, 200}, {980, 520});
     CHECK(contains(route, {800, 200}));
     CHECK(contains(route, {800, 520}));
     CHECK(!contains(route, {300, 200}));
@@ -47,7 +50,8 @@ void picksTheShorterWay() {
 
 void routeEndsAtBothPoints() {
     RoadNetwork network = small();
-    const auto route = RouteGuide::plan(network, {610, 360}, {825, 70});
+    RoadGraph graph(network);
+    const auto route = RouteGuide::plan(graph, {610, 360}, {825, 70});
     CHECK(route.front().x == 610 && route.front().y == 360);
     CHECK(route.back().x == 825 && route.back().y == 70);
     // Every leg is horizontal or vertical once on the roads.

@@ -80,6 +80,7 @@ bool Game::handleKey(sf::Keyboard::Key key) {
             break;
         case sf::Keyboard::C: clippingDebug_ = !clippingDebug_; break;
         case sf::Keyboard::B: curveDebug_ = !curveDebug_; break;
+        case sf::Keyboard::V: routeGuide_.setCompare(!routeGuide_.comparing()); break;
         case sf::Keyboard::T: dayNight_.nextMode(); break;
         case sf::Keyboard::P: paused_ = !paused_; break;
         case sf::Keyboard::R: restart(); break;
@@ -287,6 +288,7 @@ void Game::render(IRenderer& target) {
     drawNightLights(target, clip);
 
     // Guidance stays bright at night: route and incident marker on top.
+    routeGuide_.drawComparison(target, lines_);
     routeGuide_.draw(target, lines_, mission_.colour(), graphicsDebug_);
     mission_.draw(target, lines_, graphicsDebug_);
 
@@ -320,6 +322,8 @@ void Game::render(IRenderer& target) {
                 banner_.draw(target, lines_, bannerData(), bannerLeft);
                 help_.draw(target, lines_);
             }
+            if (screen_ == Screen::Playing)
+                routeGuide_.drawComparisonPanel(target, lines_, {12.0f, 560.0f});
             if (screen_ == Screen::Playing && paused_) Screens::drawPause(target, lines_);
             if (screen_ == Screen::Result)
                 Screens::drawResult(target, lines_, lastReport_, lastScore_, runTotal_);

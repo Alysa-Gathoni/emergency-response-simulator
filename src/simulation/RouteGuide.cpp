@@ -1,6 +1,10 @@
 #include "RouteGuide.h"
 #include "../core/Color.h"
 #include "../rasterization/PolygonFill.h"
+#include "../shapes/CircleEllipse.h"
+#include "../ui/Hud.h"
+#include "../ui/PixelFont.h"
+#include <string>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -18,92 +22,37 @@ constexpr float StartGap = 36.0f;       // no dashes under the ambulance itself
 
 float dist(Point a, Point b) { return std::hypot(b.x - a.x, b.y - a.y); }
 
-// Nearest point on any road centre line, and which road it is on.
-Point joinRoad(const RoadNetwork& network, Point p, int& roadIndex) {
-    float best = std::numeric_limits<float>::max();
-    Point join = p;
-    const auto& roads = network.roads();
-    for (int i = 0; i < static_cast<int>(roads.size()); ++i) {
-        const Road& r = roads[i];
-        const float d = r.vertical ? std::abs(p.x - r.centre) : std::abs(p.y - r.centre);
-        if (d < best) {
-            best = d;
-            roadIndex = i;
-            join = r.vertical ? Point{r.centre, p.y} : Point{p.x, r.centre};
-        }
-    }
-    return join;
-}
+// Route polyline: from, the search nodes, to; points closer than
+// MergeDistance merged (e.g. the ambulance already on a centre line).
+std::vector<Point> toPolyline(const SearchGraph& graph, const PathResult& path,
+                              Point from, Point to) {
+    std::vector<Point> route = {from};
+    if (path.found)
+        for (int node : path.nodes) route.push_back(graph.positions[static_cast<std::size_t>(node)]);
+    route.push_back(to);
 
-bool onRoad(const Road& r, Point p) {
-    return r.vertical ? std::abs(p.x - r.centre) < MergeDistance
-                      : std::abs(p.y - r.centre) < MergeDistance;
-}
-
-}
-
-std::vector<Point> RouteGuide::plan(const RoadNetwork& network, Point from, Point to) {
-    int startRoad = 0, endRoad = 0;
-    const Point start = joinRoad(network, from, startRoad);
-    const Point end = joinRoad(network, to, endRoad);
-
-    // Nodes: 0 = start join, 1 = end join, then the intersections.
-    std::vector<Point> nodes = {start, end};
-    for (const Intersection& i : network.intersections())
-        nodes.push_back(i.centre);
-
-    // Edges between neighbouring nodes along every road.
-    const int n = static_cast<int>(nodes.size());
-    std::vector<std::vector<std::pair<int, float>>> edges(n);
-    for (const Road& road : network.roads()) {
-        std::vector<int> along;
-        for (int i = 0; i < n; ++i)
-            if (onRoad(road, nodes[i])) along.push_back(i);
-        std::sort(along.begin(), along.end(), [&](int a, int b) {
-            return road.vertical ? nodes[a].y < nodes[b].y : nodes[a].x < nodes[b].x;
-        });
-        for (std::size_t k = 1; k < along.size(); ++k) {
-            const int a = along[k - 1], b = along[k];
-            const float w = dist(nodes[a], nodes[b]);
-            edges[a].push_back({b, w});
-            edges[b].push_back({a, w});
-        }
-    }
-
-    // Dijkstra from node 0 (the graph is tiny, so a linear scan for the
-    // closest unvisited node is enough).
-    std::vector<float> best(n, std::numeric_limits<float>::max());
-    std::vector<int> previous(n, -1);
-    std::vector<bool> done(n, false);
-    best[0] = 0.0f;
-    for (int round = 0; round < n; ++round) {
-        int u = -1;
-        for (int i = 0; i < n; ++i)
-            if (!done[i] && (u < 0 || best[i] < best[u])) u = i;
-        if (u < 0 || best[u] == std::numeric_limits<float>::max()) break;
-        done[u] = true;
-        for (const auto& [v, w] : edges[u]) {
-            if (best[u] + w < best[v]) {
-                best[v] = best[u] + w;
-                previous[v] = u;
-            }
-        }
-    }
-
-    std::vector<Point> route = {to};
-    if (best[1] == std::numeric_limits<float>::max()) {
-        route.push_back(from);                     // unreachable: straight line
-    } else {
-        for (int v = 1; v != -1; v = previous[v]) route.push_back(nodes[v]);
-        route.push_back(from);
-    }
-    std::reverse(route.begin(), route.end());
-
-    // Drop repeated points (e.g. the ambulance already on a centre line).
     std::vector<Point> clean;
     for (const Point& p : route)
         if (clean.empty() || dist(clean.back(), p) > MergeDistance) clean.push_back(p);
     return clean;
+}
+
+}
+
+std::vector<Point> RouteGuide::plan(const RoadGraph& graph, Point from, Point to) {
+    SearchGraph search = Pathfinding::fromRoads(graph);
+    const int start = Pathfinding::joinRoad(search, graph, from);
+    const int goal = Pathfinding::joinRoad(search, graph, to);
+    return toPolyline(search, Pathfinding::aStar(search, start, goal), from, to);
+}
+
+std::vector<Point> RouteGuide::planWithSearch(Point from, Point to) {
+    search_ = Pathfinding::fromRoads(graph_);
+    const int start = Pathfinding::joinRoad(search_, graph_, from);
+    const int goal = Pathfinding::joinRoad(search_, graph_, to);
+    aStar_ = Pathfinding::aStar(search_, start, goal);
+    if (compare_) dijkstra_ = Pathfinding::dijkstra(search_, start, goal);
+    return toPolyline(search_, aStar_, from, to);
 }
 
 float RouteGuide::length(const std::vector<Point>& route) {
@@ -112,12 +61,12 @@ float RouteGuide::length(const std::vector<Point>& route) {
     return total;
 }
 
-RouteGuide::RouteGuide(const RoadNetwork& network) : network_(network) {}
+RouteGuide::RouteGuide(const RoadGraph& graph) : graph_(graph) {}
 
-void RouteGuide::update(float deltaTime, Point ambulance, Point incident, bool active) {
+void RouteGuide::update(float deltaTime, Point ambulance, Point target, bool active) {
     active_ = active;
     phase_ = std::fmod(phase_ + FlowSpeed * deltaTime, DashLength + DashGap);
-    route_ = plan(network_, ambulance, incident);
+    route_ = planWithSearch(ambulance, target);
 }
 
 void RouteGuide::draw(IRenderer& target, const LineRenderer& lines,
@@ -180,4 +129,51 @@ void RouteGuide::draw(IRenderer& target, const LineRenderer& lines,
             lines.draw(target, {route_[i].x - 5, route_[i].y - 5},
                        {route_[i].x + 5, route_[i].y + 5}, Colors::Debug, 1.0f);
     }
+}
+
+void RouteGuide::drawComparison(IRenderer& target, const LineRenderer& lines) const {
+    if (!compare_ || !active_) return;
+
+    // The road graph itself: every edge as a thin line.
+    const Rgba edgeColour(120, 200, 255, 150);
+    for (const GraphEdge& e : graph_.edges())
+        lines.draw(target, graph_.nodes()[static_cast<std::size_t>(e.from)].position,
+                   graph_.nodes()[static_cast<std::size_t>(e.to)].position, edgeColour, 1.0f);
+
+    // Dijkstra: blue rings round every settled node.
+    const Rgba dijkstraColour(90, 160, 255);
+    for (int node : dijkstra_.expanded) {
+        const Point p = search_.positions[static_cast<std::size_t>(node)];
+        ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::midpointCircle(p, 22),
+                                    dijkstraColour, 3.0f);
+    }
+    // A*: orange discs inside the rings, numbered in the order they were settled.
+    const Rgba aStarColour(255, 170, 60);
+    for (std::size_t k = 0; k < aStar_.expanded.size(); ++k) {
+        const Point p = search_.positions[static_cast<std::size_t>(aStar_.expanded[k])];
+        ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(p, 13), aStarColour, 1.0f);
+        const std::string n = std::to_string(k + 1);
+        PixelFont::drawText(target, n, {p.x - PixelFont::textWidth(n, 1) * 0.5f, p.y - 3.0f}, 1,
+                            Rgba(20, 24, 30));
+    }
+}
+
+void RouteGuide::drawComparisonPanel(IRenderer& target, const LineRenderer& lines,
+                                     Point topLeft) const {
+    if (!compare_ || !active_) return;
+    const float w = 300.0f, h = 94.0f;
+    const std::vector<Point> panel = {topLeft, {topLeft.x + w, topLeft.y},
+                                      {topLeft.x + w, topLeft.y + h}, {topLeft.x, topLeft.y + h}};
+    PolygonFill::draw(target, panel, lines, Rgba(16, 20, 28, 220), false);
+
+    auto line = [&](float y, const std::string& text, Rgba c) {
+        PixelFont::drawText(target, text, {topLeft.x + 12.0f, topLeft.y + y}, 2, c);
+    };
+    const bool same = std::abs(dijkstra_.cost - aStar_.cost) < 0.5f;
+    line(10, "PATHFINDING (V)", Rgba(230, 230, 230));
+    line(32, "DIJKSTRA " + std::to_string(dijkstra_.expanded.size()) + " NODES", Rgba(90, 160, 255));
+    line(52, "A-STAR   " + std::to_string(aStar_.expanded.size()) + " NODES", Rgba(255, 170, 60));
+    line(72, same ? "SAME COST " + std::to_string(static_cast<int>(std::lround(aStar_.cost * MetresPerPixel))) + " M"
+                  : std::string("COSTS DIFFER"),
+         same ? Rgba(120, 220, 150) : Rgba(235, 80, 70));
 }

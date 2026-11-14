@@ -62,7 +62,7 @@ private:
     ClippingDemo clippingDemo_;
     Camera2D camera_{Screens::Width, Screens::Height};
     Mission mission_{graph_.incidentSpots(), startPosition_};
-    RouteGuide routeGuide_{network_};
+    RouteGuide routeGuide_{graph_};
     TrafficSystem traffic_{network_};
     RedLightCamera redLightCamera_{network_, trafficLights_};
     CollisionSystem collisions_;
