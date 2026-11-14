@@ -26,11 +26,50 @@ DrivingInput readDrivingKeys() {
 
 Game::Game() = default;
 
+bool Game::handleMenuKey(sf::Keyboard::Key key) {
+    using K = sf::Keyboard;
+    switch (screen_) {
+        case Screen::Title:
+            if (key == K::Up || key == K::W)
+                menuIndex_ = (menuIndex_ + Screens::MenuItemCount - 1) % Screens::MenuItemCount;
+            if (key == K::Down || key == K::S)
+                menuIndex_ = (menuIndex_ + 1) % Screens::MenuItemCount;
+            if (key == K::Escape) return false;
+            if (key == K::Enter || key == K::Space) {
+                switch (static_cast<Screens::MenuItem>(menuIndex_)) {
+                    case Screens::MenuItem::Start:    startShift(); break;
+                    case Screens::MenuItem::Controls: screen_ = Screen::Controls; break;
+                    case Screens::MenuItem::Quit:     return false;
+                }
+            }
+            break;
+        case Screen::Controls:
+            if (key == K::Escape || key == K::Enter) screen_ = Screen::Title;
+            break;
+        case Screen::Result:
+            if (key == K::Enter || key == K::Space) screen_ = Screen::Playing;
+            break;
+        case Screen::GameOver:
+            if (key == K::Enter || key == K::Escape) screen_ = Screen::Title;
+            break;
+        case Screen::Playing:
+            break;
+    }
+    return true;
+}
+
 bool Game::handleKey(sf::Keyboard::Key key) {
+    // Renderer and line algorithm can be switched on any screen.
+    if (key == sf::Keyboard::O) { useOpenGL_ = !useOpenGL_; return true; }
+    if (key == sf::Keyboard::L) { lines_.nextMode(); return true; }
+    if (screen_ != Screen::Playing) return handleMenuKey(key);
+
     switch (key) {
-        case sf::Keyboard::Escape: return false;
-        case sf::Keyboard::L: lines_.nextMode(); break;
-        case sf::Keyboard::O: useOpenGL_ = !useOpenGL_; break;
+        case sf::Keyboard::Escape:
+            // First Esc pauses, a second one goes back to the main menu.
+            if (paused_) { paused_ = false; screen_ = Screen::Title; }
+            else paused_ = true;
+            break;
         case sf::Keyboard::G:
             graphicsDebug_ = !graphicsDebug_;
             lines_.setDebug(graphicsDebug_);
@@ -56,6 +95,56 @@ void Game::restart() {
     redLightCamera_.reset();
     mission_.restart(startPosition_);
     paused_ = false;
+    runTotal_ = 0;
+    callStarted_ = false;
+    lastMissionState_ = Mission::State::Active;
+    screen_ = Screen::Playing;
+}
+
+void Game::startShift() {
+    restart();
+    help_.setExpanded(true);
+    helpAutoHidden_ = false;
+}
+
+void Game::stepWorld(float dt) {
+    // Everything that lives on without the player (also behind the menus).
+    trafficLights_.update(dt);
+    dayNight_.update(dt);
+    pedestrians_.update(dt, trafficLights_);
+    auto obstacles = pedestrians_.footprints();
+    obstacles.push_back(ambulance_.footprint());
+    traffic_.update(dt, trafficLights_, obstacles);
+}
+
+void Game::trackMission() {
+    const Mission::State state = mission_.state();
+
+    // A new call has just come in: remember where the counters stood and
+    // how long the shortest route is (for the par time).
+    if (!callStarted_ && state == Mission::State::Active) {
+        callStarted_ = true;
+        callStartCollisions_ = collisions_.collisions();
+        callStartRedLights_ = redLightCamera_.violations();
+        callRouteLength_ = routeGuide_.remaining();
+    }
+
+    if (lastMissionState_ == Mission::State::Active && state != Mission::State::Active) {
+        lastReport_ = MissionReport{};
+        lastReport_.incidentType = static_cast<int>(mission_.type());
+        lastReport_.arrived = state == Mission::State::Arrived;
+        lastReport_.elapsed = state == Mission::State::Arrived ? mission_.lastResponseTime()
+                                                              : mission_.elapsed();
+        lastReport_.routeLength = callRouteLength_;
+        lastReport_.collisions = collisions_.collisions() - callStartCollisions_;
+        lastReport_.redLights = redLightCamera_.violations() - callStartRedLights_;
+        lastScore_ = Scoring::score(lastReport_);
+        runTotal_ += lastScore_.total;
+        bestScore_ = std::max(bestScore_, runTotal_);
+        screen_ = lastReport_.arrived ? Screen::Result : Screen::GameOver;
+        callStarted_ = false;
+    }
+    lastMissionState_ = state;
 }
 
 void Game::step(float dt, const DrivingInput& input) {
@@ -75,6 +164,7 @@ void Game::step(float dt, const DrivingInput& input) {
     mission_.update(dt, ambulance_.position(), ambulance_.speed());
     routeGuide_.update(dt, ambulance_.position(), mission_.incidentPosition(),
                        mission_.state() == Mission::State::Active);
+    trackMission();
 }
 
 void Game::drawNightLights(IRenderer& target) const {
@@ -124,8 +214,10 @@ HudData Game::hudData() const {
     h.redLights = redLightCamera_.violations();
     h.completed = mission_.completed();
     h.missed = mission_.missed();
-    h.arrived = mission_.state() == Mission::State::Arrived;
-    h.late = mission_.state() == Mission::State::Missed;
+    h.score = runTotal_;
+    // The result and game-over screens show the outcome of a call.
+    h.arrived = false;
+    h.late = false;
     h.lineMode = lines_.getMode() == LineMode::Bresenham ? 0
                : lines_.getMode() == LineMode::DDA ? 1 : 2;
     return h;
@@ -159,23 +251,36 @@ void Game::render(IRenderer& target) const {
     mission_.draw(target, lines_, graphicsDebug_);
 
     clippingDemo_.draw(target, lines_, clippingDebug_);
-    hud_.draw(target, lines_, hudData());
 
-    if (paused_) {
-        const float h = 48.0f;
-        const float w = SevenSegment::textWidth("PAUSE", h);
-        const float x = 550.0f - w * 0.5f;
-        PolygonFill::draw(target, {{x - 20, 300}, {x + w + 20, 300},
-                                   {x + w + 20, 378}, {x - 20, 378}},
-                          lines_, Rgba(12, 16, 22, 200), false);
-        SevenSegment::drawText(target, lines_, "PAUSE", {x, 315}, h,
-                               Rgba(240, 200, 80));
+    switch (screen_) {
+        case Screen::Title:
+            Screens::drawTitle(target, lines_, menuIndex_, bestScore_);
+            break;
+        case Screen::Controls: {
+            Screens::dim(target, lines_, 150);
+            HelpPanel open;
+            open.draw(target, lines_);
+            Screens::drawControlsFooter(target, lines_);
+            break;
+        }
+        case Screen::Playing:
+        case Screen::Result:
+        case Screen::GameOver: {
+            hud_.draw(target, lines_, hudData());
+            // Objective and controls last, so they are never covered by the scene.
+            const float bannerLeft = HelpPanel::Left + help_.width() + 12.0f;
+            if (screen_ == Screen::Playing) {
+                banner_.draw(target, lines_, bannerData(), bannerLeft);
+                help_.draw(target, lines_);
+            }
+            if (screen_ == Screen::Playing && paused_) Screens::drawPause(target, lines_);
+            if (screen_ == Screen::Result)
+                Screens::drawResult(target, lines_, lastReport_, lastScore_, runTotal_);
+            if (screen_ == Screen::GameOver)
+                Screens::drawGameOver(target, lines_, mission_.completed(), runTotal_);
+            break;
+        }
     }
-
-    // Objective and controls last, so they are never covered by the scene.
-    const float bannerLeft = HelpPanel::Left + help_.width() + 12.0f;
-    banner_.draw(target, lines_, bannerData(), bannerLeft);
-    help_.draw(target, lines_);
 
     // Which backend drew this frame (for the comparison screenshots).
     PixelFont::drawText(target, target.name(), {12, 672}, 2, Rgba(140, 150, 160));
@@ -220,7 +325,9 @@ int Game::run() {
 
         // Driving keys only count while the window has focus (the keyboard
         // state is global, so other applications would steer otherwise).
-        const DrivingInput input = window.hasFocus() ? readDrivingKeys() : DrivingInput{};
+        const bool driving = screen_ == Screen::Playing && !paused_;
+        const DrivingInput input = window.hasFocus() && driving ? readDrivingKeys()
+                                                                : DrivingInput{};
         // The panel is open on start; the first press of the accelerator
         // folds it away (H brings it back), the banner keeps the goal shown.
         if (!helpAutoHidden_ && input.throttle > 0.0f) {
@@ -229,7 +336,8 @@ int Game::run() {
         }
 
         while (accumulator >= FixedStep) {
-            if (!paused_) step(FixedStep, input);
+            if (driving) step(FixedStep, input);
+            else if (screen_ != Screen::Playing) stepWorld(FixedStep);
             accumulator -= FixedStep;
         }
 
@@ -243,15 +351,19 @@ int Game::renderScreenshot(const std::string& path, float seconds, const std::st
     // Evidence shots show the scene with the controls panel minimised;
     // an 'H' in `keys` opens it again.
     help_.setExpanded(false);
+    screen_ = Screen::Playing;
     for (char k : keys) {
+        if (k == '@') { screen_ = Screen::Title; continue; }   // menu screenshot
         const char upper = static_cast<char>(std::toupper(static_cast<unsigned char>(k)));
         if (upper >= 'A' && upper <= 'Z')
             handleKey(static_cast<sf::Keyboard::Key>(sf::Keyboard::A + (upper - 'A')));
     }
 
     const int steps = static_cast<int>(seconds / FixedStep);
-    for (int i = 0; i < steps; ++i)
-        step(FixedStep, DrivingInput{});
+    for (int i = 0; i < steps; ++i) {
+        if (screen_ == Screen::Playing) step(FixedStep, DrivingInput{});
+        else stepWorld(FixedStep);
+    }
 
     sf::RenderTexture canvas;
     if (!canvas.create(static_cast<unsigned>(RoadNetwork::WorldWidth),

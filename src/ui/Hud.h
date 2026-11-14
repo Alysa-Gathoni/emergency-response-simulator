@@ -15,6 +15,7 @@ struct HudData {
     int redLights{0};
     int completed{0};
     int missed{0};
+    int score{0};               // shift total so far
     bool arrived{false};
     bool late{false};
     int lineMode{0};            // 0 Bresenham, 1 DDA, 2 graphics API lines
