@@ -67,6 +67,15 @@ public:
     virtual void drawNativeLines(const std::vector<Point>& endpoints, Rgba colour, float width) = 0;
     virtual void drawNativeTriangles(const std::vector<Point>& vertices, Rgba colour) = 0;
 
+    // Static geometry cache (OpenGL display lists). Everything drawn
+    // between beginStatic and endStatic is recorded once and replayed while
+    // `key` stays the same; beginStatic returns false when the cached copy
+    // was replayed and the caller must not draw it again. Backends without
+    // a cache always return true, so the caller simply draws.
+    virtual bool cachesStatic() const { return false; }
+    virtual bool beginStatic(unsigned /*key*/) { return true; }
+    virtual void endStatic() {}
+
 protected:
     // Called whenever the current matrix changes.
     virtual void applyMatrix(const Mat3& matrix) = 0;

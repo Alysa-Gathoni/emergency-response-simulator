@@ -65,6 +65,7 @@ bool Game::handleKey(sf::Keyboard::Key key) {
     // Renderer and line algorithm can be switched on any screen.
     if (key == sf::Keyboard::O) { useOpenGL_ = !useOpenGL_; return true; }
     if (key == sf::Keyboard::L) { lines_.nextMode(); return true; }
+    if (key == sf::Keyboard::F) { PolygonFill::nextMode(); return true; }
     if (screen_ != Screen::Playing) return handleMenuKey(key);
 
     switch (key) {
@@ -251,8 +252,25 @@ void Game::render(IRenderer& target) {
     target.setView(camera_.view());
     lines_.setClip(clip);
 
-    city_.draw(target, lines_, graphicsDebug_);
-    environment_.draw(target, graphicsDebug_);
+    // The city never moves: with OpenGL it is recorded once into a display
+    // list (whole map, no clipping) and replayed every frame; the key makes
+    // it re-record when a mode that changes its pixels is switched. The C
+    // key demo needs our clipping on every frame, so it draws directly.
+    const unsigned staticKey = 1u + static_cast<unsigned>(lines_.getMode())
+                             + 4u * static_cast<unsigned>(PolygonFill::mode())
+                             + 16u * (graphicsDebug_ ? 1u : 0u);
+    if (target.cachesStatic() && !clippingDebug_) {
+        if (target.beginStatic(staticKey)) {
+            lines_.clearClip();
+            city_.draw(target, lines_, graphicsDebug_);
+            environment_.draw(target, graphicsDebug_);
+            target.endStatic();
+            lines_.setClip(clip);
+        }
+    } else {
+        city_.draw(target, lines_, graphicsDebug_);
+        environment_.draw(target, graphicsDebug_);
+    }
     trafficLights_.draw(target, lines_, graphicsDebug_);
     pedestrians_.draw(target, lines_, trafficLights_, graphicsDebug_);
     traffic_.draw(target, lines_, curveDebug_, graphicsDebug_);
@@ -275,8 +293,11 @@ void Game::render(IRenderer& target) {
     lines_.clearClip();
     clippingDemo_.draw(target, lines_, clippingDebug_, clip);
 
-    // Screen pass: HUD, menus and panels.
+    // Screen pass: HUD, menus and panels. The ear-clipping view would
+    // draw triangle edges over every panel, so the HUD keeps the scan-line fill.
     target.setView(Mat3::identity());
+    const FillMode worldFill = PolygonFill::mode();
+    if (worldFill == FillMode::Triangles) PolygonFill::setMode(FillMode::ScanLine);
 
     switch (screen_) {
         case Screen::Title:
@@ -309,7 +330,9 @@ void Game::render(IRenderer& target) {
     }
 
     // Which backend drew this frame (for the comparison screenshots).
-    PixelFont::drawText(target, target.name(), {12, 672}, 2, Rgba(140, 150, 160));
+    PixelFont::drawText(target, std::string(target.name()) + "  " + PolygonFill::modeName(worldFill),
+                        {12, 672}, 2, Rgba(140, 150, 160));
+    PolygonFill::setMode(worldFill);
     target.endFrame();
 }
 

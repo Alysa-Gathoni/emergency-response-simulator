@@ -15,6 +15,18 @@ std::vector<Point> rectPoints(const Rect& r) {
     return rectPoints(r.left, r.top, r.right, r.bottom);
 }
 
+// Rectangle l..r x t..b with the corner `corner` (0 NE, 1 SE, 2 SW, 3 NW)
+// cut away: six vertices, one of them reflex, listed clockwise on screen.
+std::vector<Point> lShape(float l, float t, float r, float b, int corner) {
+    const float cx = (r - l) * 0.42f, cy = (b - t) * 0.42f;
+    switch (corner) {
+        case 0:  return {{l, t}, {r - cx, t}, {r - cx, t + cy}, {r, t + cy}, {r, b}, {l, b}};
+        case 1:  return {{l, t}, {r, t}, {r, b - cy}, {r - cx, b - cy}, {r - cx, b}, {l, b}};
+        case 2:  return {{l, t}, {r, t}, {r, b}, {l + cx, b}, {l + cx, b - cy}, {l, b - cy}};
+        default: return {{l + cx, t}, {r, t}, {r, b}, {l, b}, {l, t + cy}, {l + cx, t + cy}};
+    }
+}
+
 const Rgba Pavement(58, 64, 72);
 const Rgba Grass(46, 84, 54);
 const Rgba Zebra(225, 225, 225);
@@ -53,6 +65,7 @@ City::City(const RoadNetwork& network) : network_(network) {
         return a.left == b.left && a.top == b.top && a.right == b.right && a.bottom == b.bottom;
     };
 
+    int lot = 0;
     for (const Rect& block : network.blocks()) {
         const Rect inner{block.left + pavement, block.top + pavement,
                          block.right - pavement, block.bottom - pavement};
@@ -88,8 +101,15 @@ City::City(const RoadNetwork& network) : network_(network) {
                 const float t = cy[r] + (r > 0 ? pavement * 0.5f : 0.0f);
                 const float rr = cx[c + 1] - (c + 1 < cols ? pavement * 0.5f : 0.0f);
                 const float b = cy[r + 1] - (r + 1 < rowsHere ? pavement * 0.5f : 0.0f);
-                if (rr - l > 30.0f && b - t > 30.0f)
-                    buildings_.emplace_back(rectPoints(l, t, rr, b));
+                if (rr - l <= 30.0f || b - t <= 30.0f) continue;
+                // Every third large lot is L-shaped: a corner is cut away for
+                // a yard. These concave outlines are what the ear clipping
+                // (F key) has to triangulate.
+                if (++lot % 3 == 0 && rr - l > 90.0f && b - t > 80.0f) {
+                    buildings_.emplace_back(lShape(l, t, rr, b, lot / 3 % 4));
+                    continue;
+                }
+                buildings_.emplace_back(rectPoints(l, t, rr, b));
             }
         }
     }
@@ -185,6 +205,10 @@ void City::draw(IRenderer& target,
                           roofs[i % 3], polygonDebug);
         building.drawOutline(target, lines, Colors::Building, 2.0f);
 
+        if (polygonDebug)
+            building.drawVertices(target, Colors::Debug);
+        if (building.vertices().size() != 4) continue;
+
         // Roof parapet: the same rectangle scaled down about its centre.
         Polygon parapet = building;
         const auto& v = building.vertices();
@@ -192,9 +216,6 @@ void City::draw(IRenderer& target,
         const float h = v[2].y - v[1].y;
         parapet.scale((w - 14.0f) / w, (h - 14.0f) / h);
         parapet.drawOutline(target, lines, Rgba(130, 138, 146), 1.0f);
-
-        if (polygonDebug)
-            building.drawVertices(target, Colors::Debug);
     }
 
     PolygonFill::draw(target, hospital_.vertices(), lines,

@@ -93,3 +93,29 @@ void GLRenderer::drawNativeTriangles(const std::vector<Point>& vertices, Rgba c)
     for (const Point& p : vertices) glVertex2f(p.x, p.y);
     glEnd();
 }
+
+bool GLRenderer::beginStatic(unsigned key) {
+    // Replay: one call sends the whole recorded city to the driver, which
+    // already holds the vertex data, instead of thousands of glVertex calls.
+    if (list_ != 0 && key == listKey_ && target_ == listTarget_) {
+        glCallList(list_);
+        return false;
+    }
+
+    // (Re)record. The list stores the vertices and colours in world
+    // coordinates; the view matrix is loaded before glCallList each frame,
+    // so the camera can move without rebuilding it.
+    if (list_ == 0) list_ = glGenLists(1);
+    listKey_ = key;
+    listTarget_ = target_;
+    recording_ = true;
+    ++rebuilds_;
+    glNewList(list_, GL_COMPILE_AND_EXECUTE);
+    return true;
+}
+
+void GLRenderer::endStatic() {
+    if (!recording_) return;
+    glEndList();
+    recording_ = false;
+}
