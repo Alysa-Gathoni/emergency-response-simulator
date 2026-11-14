@@ -1,4 +1,6 @@
 #include <SFML/Graphics.hpp>
+#include <cmath>
+#include <vector>
 #include "core/Color.h"
 #include "lines/LineRenderer.h"
 #include "city/RoadNetwork.h"
@@ -7,6 +9,7 @@
 #include "city/RedLightCamera.h"
 #include "city/Environment.h"
 #include "city/Pedestrians.h"
+#include "city/DayNight.h"
 #include "simulation/Ambulance.h"
 #include "simulation/ClippingDemo.h"
 #include "simulation/CollisionSystem.h"
@@ -29,6 +32,7 @@ int main() {
     City city(network);
     Environment environment;
     Pedestrians pedestrians(network);
+    DayNight dayNight;
     TrafficLights trafficLights(network);
     Ambulance ambulance(startPosition);
     ClippingDemo clippingDemo;
@@ -72,6 +76,9 @@ int main() {
                 if (event.key.code == sf::Keyboard::B)
                     curveDebug = !curveDebug;
 
+                if (event.key.code == sf::Keyboard::T)
+                    dayNight.nextMode();
+
                 if (event.key.code == sf::Keyboard::R) {
                     // Restart: ambulance back at the hospital, traffic and
                     // signals back to their starting state, counters cleared.
@@ -94,6 +101,7 @@ int main() {
                                                       : DrivingInput{});
         redLightCamera.update(beforeMove, ambulance.position(), deltaTime);
         trafficLights.update(deltaTime);
+        dayNight.update(deltaTime);
         pedestrians.update(deltaTime, trafficLights);
 
         // Traffic must not drive into the ambulance or people on a crossing.
@@ -118,6 +126,28 @@ int main() {
         ambulance.draw(window, lineRenderer, graphicsDebug);
         redLightCamera.draw(window, lineRenderer);
         collisions.draw(window, lineRenderer, graphicsDebug);
+
+        // Night: tint the finished scene, then draw lights on top of it.
+        dayNight.drawOverlay(window, lineRenderer);
+        std::vector<DayNight::Light> lights;
+        for (const auto& v : traffic.vehicles()) {
+            const Point p = v.position();
+            const Point d = v.direction();
+            const float front = v.halfLength();
+            lights.push_back({{p.x + d.x * front, p.y + d.y * front}, d,
+                              sf::Color(255, 240, 180)});
+        }
+        {
+            const float a = ambulance.heading() * 3.14159265f / 180.0f;
+            const Point d{std::cos(a), std::sin(a)};
+            const Point p = ambulance.position();
+            lights.push_back({{p.x + d.x * 30.0f, p.y + d.y * 30.0f}, d,
+                              sf::Color(255, 250, 220)});
+        }
+        for (const auto& [position, colour] : trafficLights.litBulbs())
+            lights.push_back({position, {0.0f, 0.0f}, colour});
+        dayNight.drawLights(window, lineRenderer, lights, graphicsDebug);
+
         clippingDemo.draw(window, lineRenderer, clippingDebug);
 
         window.display();
