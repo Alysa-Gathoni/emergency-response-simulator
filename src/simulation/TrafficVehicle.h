@@ -48,6 +48,8 @@ public:
     Point position() const;
     Point direction() const;          // unit vector of travel
     std::vector<Point> footprint() const;
+    bool braking() const;             // brake lights on
+    int indicator() const;            // -1 left, 0 none, +1 right (turn ahead)
 
     void draw(sf::RenderTarget& target,
               const LineRenderer& lines,
@@ -62,6 +64,7 @@ private:
     int paletteIndex_;
     float speed_{0.0f};
 
+    float age_{0.0f};        // seconds alive (drives indicator blinking)
     float dwell_{0.0f};      // remaining stop time at a matatu stage
     int servedStage_{-1};
 

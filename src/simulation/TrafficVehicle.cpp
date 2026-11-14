@@ -1,4 +1,6 @@
 #include "TrafficVehicle.h"
+#include "VehicleModels.h"
+#include "../core/Mat3.h"
 #include "../polygons/Polygon.h"
 #include "../rasterization/PolygonFill.h"
 #include "../shapes/CircleEllipse.h"
@@ -29,20 +31,6 @@ sf::Color limiterColor(SpeedLimiter reason) {
 
 }
 
-namespace {
-
-const sf::Color CarColors[] = {
-    {70, 135, 205}, {196, 64, 58}, {190, 194, 200}, {64, 150, 112}, {230, 230, 226}
-};
-const sf::Color MatatuColors[] = {
-    {242, 196, 48}, {120, 70, 170}, {40, 170, 120}
-};
-const sf::Color RiderColors[] = {
-    {230, 120, 40}, {40, 120, 230}, {220, 220, 60}
-};
-
-}
-
 TrafficVehicle::TrafficVehicle(std::shared_ptr<const TrafficRoute> route,
                                VehicleType type, float cruiseSpeed,
                                float startDistance, int paletteIndex)
@@ -62,6 +50,7 @@ void TrafficVehicle::setTarget(float targetSpeed, SpeedLimiter reason,
 }
 
 void TrafficVehicle::integrate(float deltaTime) {
+    age_ += deltaTime;
     if (dwell_ > 0.0f) {
         // Passengers boarding at a matatu stage.
         dwell_ -= deltaTime;
@@ -142,55 +131,32 @@ std::vector<Point> TrafficVehicle::footprint() const {
     };
 }
 
+bool TrafficVehicle::braking() const {
+    return speed_ > 0.5f && targetSpeed_ < speed_ - 2.0f;
+}
+
+int TrafficVehicle::indicator() const {
+    // Compare the heading now with the heading 70 px further along the
+    // route. The z component of their cross product gives the turn side:
+    // positive = clockwise on screen = right turn (y points down).
+    const Point now = direction();
+    const Point later = route_->path.directionAtDistance(distance_ + 70.0f);
+    const float turn = now.x * later.y - now.y * later.x;
+    if (turn > 0.3f) return 1;
+    if (turn < -0.3f) return -1;
+    return 0;
+}
+
 void TrafficVehicle::drawBody(sf::RenderTarget& target,
                               const LineRenderer& lines) const {
     const Point c = position();
     const Point d = direction();
-    const float hl = spec_->halfLength;
-    const float hw = spec_->halfWidth;
-    auto local = [&](float lx, float ly) { return transformLocal(c, d, lx, ly); };
-    auto disc = [&](Point p, int r, sf::Color col) {
-        ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(p, r), col, 1.0f);
-    };
-    const sf::Color tyre(25, 25, 25);
-    const sf::Color glass(40, 50, 64);
-    const auto body = footprint();
-
-    switch (spec_->type) {
-    case VehicleType::Car:
-        PolygonFill::draw(target, body, lines, CarColors[paletteIndex_ % 5], false);
-        Polygon(body).drawOutline(target, lines, sf::Color(20, 24, 30), 1.0f);
-        // Windscreen and rear window.
-        lines.draw(target, local(5, -hw + 2), local(5, hw - 2), glass, 2.0f);
-        lines.draw(target, local(-10, -hw + 2), local(-10, hw - 2), glass, 2.0f);
-        break;
-
-    case VehicleType::Matatu: {
-        PolygonFill::draw(target, body, lines, MatatuColors[paletteIndex_ % 3], false);
-        Polygon(body).drawOutline(target, lines, sf::Color(20, 24, 30), 1.0f);
-        // Livery stripe along both sides, roof sign and windscreen.
-        for (float side : {-hw + 3.0f, hw - 3.0f})
-            lines.draw(target, local(-hl + 4, side), local(hl - 6, side),
-                       sf::Color(200, 40, 60), 2.0f);
-        const std::vector<Point> sign = {local(-6, -5), local(6, -5), local(6, 5), local(-6, 5)};
-        PolygonFill::draw(target, sign, lines, sf::Color(250, 250, 250), false);
-        lines.draw(target, local(hl - 7, -hw + 2), local(hl - 7, hw - 2), glass, 2.0f);
-        break;
-    }
-
-    case VehicleType::Motorcycle:
-        disc(local(hl - 4, 0), 4, tyre);
-        disc(local(-hl + 4, 0), 4, tyre);
-        PolygonFill::draw(target, body, lines, sf::Color(60, 60, 66), false);
-        disc(local(-1, 0), 4, RiderColors[paletteIndex_ % 3]);   // helmet
-        lines.draw(target, local(hl - 6, -hw - 2), local(hl - 6, hw + 2),
-                   sf::Color(150, 150, 150), 1.0f);              // handlebar
-        return;
-    }
-
-    for (float side : {-hw - 1.0f, hw + 1.0f})
-        for (float along : {-hl * 0.6f, hl * 0.6f})
-            disc(local(along, side), 3, tyre);
+    // One composite matrix places the whole model: T(position) * R(heading).
+    const Mat3 world = Mat3::translation(c.x, c.y) *
+                       Mat3::rotation(std::atan2(d.y, d.x));
+    const VehiclePose pose{world, spec_->type, paletteIndex_, braking(),
+                           indicator(), std::fmod(age_, 0.8f) < 0.4f};
+    VehicleModels::draw(target, lines, pose);
 }
 
 void TrafficVehicle::draw(sf::RenderTarget& target,
