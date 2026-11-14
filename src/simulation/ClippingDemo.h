@@ -3,12 +3,15 @@
 #include "../lines/LineRenderer.h"
 #include "../rasterization/Clipping.h"
 
+// C key: the camera's clip window is shrunk so the clipping that normally
+// happens at the edge of the screen becomes visible in the middle of it.
+// Every road, building and vehicle outside the yellow frame is cut by our
+// Cohen-Sutherland (lines) and Sutherland-Hodgman (polygons) code before
+// rasterisation; the frame shows where.
 class ClippingDemo {
 public:
-    void draw(IRenderer& target,
-              const LineRenderer& lines,
-              bool enabled) const;
+    static constexpr float Inset = 150.0f;   // px from each window edge
 
-private:
-    ClipRect viewport_{90.0f, 40.0f, 810.0f, 660.0f};
+    void draw(IRenderer& target, const LineRenderer& lines,
+              bool enabled, const ClipRect& window) const;
 };

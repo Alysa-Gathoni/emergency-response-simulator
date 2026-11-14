@@ -67,20 +67,20 @@ float DayNight::darkness() const {
     return std::clamp(tint().a / 165.0f, 0.0f, 1.0f);
 }
 
-void DayNight::drawOverlay(IRenderer& target, const LineRenderer& lines) const {
+void DayNight::drawOverlay(IRenderer& target, const LineRenderer& lines,
+                           float w, float h) const {
     const Rgba c = tint();
     if (c.a == 0) return;
-    const float w = RoadNetwork::WorldWidth;
-    const float h = RoadNetwork::WorldHeight;
     PolygonFill::draw(target, {{0, 0}, {w, 0}, {w, h}, {0, h}}, lines, c, false);
 }
 
 void DayNight::drawLights(IRenderer& target, const LineRenderer& lines,
-                          const std::vector<Light>& lights, bool debug) const {
+                          const std::vector<Light>& lights, const ClipRect& visible,
+                          bool debug) const {
     const float dark = darkness();
     if (dark < 0.15f) return;
 
-    const ClipRect screen{0.0f, 0.0f, RoadNetwork::WorldWidth, RoadNetwork::WorldHeight};
+    const ClipRect screen = visible;
     // Two nested cones (wide and dim, narrow and brighter) give a soft
     // falloff without per-pixel lighting.
     const struct { float spreadDeg, reach; } layers[] = {{24.0f, 95.0f}, {11.0f, 80.0f}};

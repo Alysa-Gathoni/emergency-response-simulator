@@ -3,6 +3,7 @@
 #include <vector>
 #include "../core/Point.h"
 #include "../lines/LineRenderer.h"
+#include "../rasterization/Clipping.h"
 
 // Time of day as a tint over the finished scene.
 //
@@ -32,9 +33,13 @@ public:
         Rgba colour;
     };
 
-    void drawOverlay(IRenderer& target, const LineRenderer& lines) const;
+    // The tint covers the whole window, so it is drawn in screen space.
+    void drawOverlay(IRenderer& target, const LineRenderer& lines,
+                     float width, float height) const;
+    // Lights are in world space; cones are clipped to the visible area.
     void drawLights(IRenderer& target, const LineRenderer& lines,
-                    const std::vector<Light>& lights, bool debug) const;
+                    const std::vector<Light>& lights, const ClipRect& visible,
+                    bool debug) const;
 
 private:
     Mode mode_{Mode::Day};

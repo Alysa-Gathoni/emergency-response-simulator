@@ -10,6 +10,7 @@ find_package(OpenGL REQUIRED)
 add_executable(EmergencyResponseSimulator
     src/main.cpp
     src/Game.cpp
+    src/core/Camera2D.cpp
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
@@ -102,6 +103,7 @@ add_executable(test_driving
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
@@ -127,6 +129,7 @@ add_executable(test_route
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
@@ -142,6 +145,7 @@ add_executable(test_hud
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
@@ -158,6 +162,7 @@ add_executable(test_help_panel
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
@@ -180,6 +185,7 @@ add_executable(test_render_paths
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
@@ -204,6 +210,7 @@ add_executable(test_traffic_system
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
@@ -211,3 +218,15 @@ add_executable(test_traffic_system
 )
 target_include_directories(test_traffic_system PRIVATE src)
 add_test(NAME traffic_system COMMAND test_traffic_system)
+
+add_executable(test_camera
+    tests/test_camera.cpp
+    src/core/Camera2D.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
+    src/rasterization/PolygonFill.cpp
+)
+target_include_directories(test_camera PRIVATE src)
+add_test(NAME camera COMMAND test_camera)
