@@ -1,39 +1,59 @@
 #pragma once
 #include "render/IRenderer.h"
 #include <vector>
-#include "../city/RoadNetwork.h"
+#include "../city/RoadGraph.h"
+#include "Pathfinding.h"
 #include "../lines/LineRenderer.h"
 
 // Shortest route along the roads from the ambulance to the incident.
 //
-// The road network becomes a small weighted graph:
-//   nodes = intersection centres + the points where the ambulance and the
-//           incident join their nearest road centre line
-//   edges = consecutive nodes on the same road, weight = distance
-// Dijkstra's algorithm finds the shortest node sequence. The route is
-// re-planned every frame, so it follows the ambulance if the driver takes
-// a different turn.
+// Search graph = the RoadGraph (junctions and map-edge points, edges
+// weighted by length) plus two extra nodes where the ambulance and the
+// target join their nearest road section. A* with the straight-line
+// heuristic finds the route; it is re-planned every frame, so it follows
+// the ambulance if the driver takes a different turn.
 //
-// It is drawn as dashes flowing towards the incident, plus an arrow next
-// to the ambulance pointing along the first leg.
+// V shows the comparison overlay: the same query is also answered by
+// Dijkstra, and the nodes each algorithm settled are marked on the map
+// (Dijkstra rings, A* discs numbered in settling order) with the counts
+// in a panel.
+//
+// The route is drawn as dashes flowing towards the target, plus an arrow
+// next to the ambulance pointing along the first leg.
 class RouteGuide {
 public:
     // Polyline from `from` to `to` (both included) following the roads.
-    static std::vector<Point> plan(const RoadNetwork& network, Point from, Point to);
+    static std::vector<Point> plan(const RoadGraph& graph, Point from, Point to);
     static float length(const std::vector<Point>& route);
 
-    explicit RouteGuide(const RoadNetwork& network);
+    explicit RouteGuide(const RoadGraph& graph);
 
-    void update(float deltaTime, Point ambulance, Point incident, bool active);
+    void update(float deltaTime, Point ambulance, Point target, bool active);
     void draw(IRenderer& target, const LineRenderer& lines,
               Rgba colour, bool debug) const;
+
+    // Comparison overlay (V): world-space markers and the screen panel.
+    void setCompare(bool on) { compare_ = on; }
+    bool comparing() const { return compare_; }
+    void drawComparison(IRenderer& target, const LineRenderer& lines) const;
+    void drawComparisonPanel(IRenderer& target, const LineRenderer& lines, Point topLeft) const;
+
+    const PathResult& lastDijkstra() const { return dijkstra_; }
+    const PathResult& lastAStar() const { return aStar_; }
 
     const std::vector<Point>& route() const { return route_; }
     float remaining() const { return length(route_); }
 
 private:
-    const RoadNetwork& network_;
+    const RoadGraph& graph_;
     std::vector<Point> route_;
     float phase_{0.0f};
     bool active_{false};
+
+    bool compare_{false};
+    SearchGraph search_;
+    PathResult dijkstra_;
+    PathResult aStar_;
+
+    std::vector<Point> planWithSearch(Point from, Point to);
 };

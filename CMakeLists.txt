@@ -40,6 +40,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/CollisionSystem.cpp
     src/simulation/EmergencyMarker.cpp
     src/simulation/Mission.cpp
+    src/simulation/Pathfinding.cpp
     src/simulation/RouteGuide.cpp
     src/simulation/SceneNode.cpp
     src/simulation/Scoring.cpp
@@ -124,8 +125,11 @@ add_test(NAME collision COMMAND test_collision)
 
 add_executable(test_route
     tests/test_route.cpp
+    src/simulation/Pathfinding.cpp
     src/simulation/RouteGuide.cpp
+    src/city/RoadGraph.cpp
     src/city/RoadNetwork.cpp
+    src/ui/PixelFont.cpp
     src/curves/Bezier.cpp
     src/curves/CatmullRom.cpp
     src/curves/Spline.cpp
@@ -267,3 +271,15 @@ add_executable(test_ear_clipping
 )
 target_include_directories(test_ear_clipping PRIVATE src)
 add_test(NAME ear_clipping COMMAND test_ear_clipping)
+
+add_executable(test_pathfinding
+    tests/test_pathfinding.cpp
+    src/simulation/Pathfinding.cpp
+    src/city/RoadGraph.cpp
+    src/city/RoadNetwork.cpp
+    src/curves/Bezier.cpp
+    src/curves/CatmullRom.cpp
+    src/curves/Spline.cpp
+)
+target_include_directories(test_pathfinding PRIVATE src)
+add_test(NAME pathfinding COMMAND test_pathfinding)

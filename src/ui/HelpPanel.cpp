@@ -46,6 +46,7 @@ const std::vector<Row> Rows = {
     {"G",                                  "DEBUG VIEW"},
     {"B",                                  "ROUTE CURVES"},
     {"C",                                  "CLIPPING DEMO"},
+    {"V",                                  "DIJKSTRA VS A-STAR"},
     {"L",                                  "LINE ALGORITHM"},
     {"F",                                  "FILL: SCAN / EAR / API"},
     {"O",                                  "OPENGL / SOFTWARE"},
