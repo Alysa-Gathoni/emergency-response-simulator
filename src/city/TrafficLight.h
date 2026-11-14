@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <utility>
 #include <vector>
 #include "RoadNetwork.h"
 #include "SignalController.h"
@@ -20,6 +21,9 @@ public:
     Signal signalAt(int intersection, SignalGroup group) const;
     Signal signalFor(const StopLine& stopLine) const;
     const SignalController& controller(int intersection) const;
+
+    // Centre and colour of every lit bulb (used for the night glow).
+    std::vector<std::pair<Point, sf::Color>> litBulbs() const;
 
     void draw(sf::RenderTarget& target,
               const LineRenderer& lines,

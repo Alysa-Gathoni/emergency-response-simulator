@@ -53,6 +53,18 @@ const SignalController& TrafficLights::controller(int intersection) const {
     return controllers_[static_cast<std::size_t>(intersection)];
 }
 
+std::vector<std::pair<Point, sf::Color>> TrafficLights::litBulbs() const {
+    std::vector<std::pair<Point, sf::Color>> result;
+    for (const StopLine& stop : network_.stopLines()) {
+        const Signal lit = signalFor(stop);
+        const Point d = headingVector(stop.approach);
+        const Point centre = offset(offset(stop.b, leftOf(d), 12.0f), d, -14.0f);
+        const float along = lit == Signal::Red ? 10.0f : lit == Signal::Green ? -10.0f : 0.0f;
+        result.push_back({offset(centre, d, along), bulbColor(lit, lit)});
+    }
+    return result;
+}
+
 void TrafficLights::draw(sf::RenderTarget& target,
                          const LineRenderer& lines,
                          bool debug) const {

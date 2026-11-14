@@ -20,6 +20,7 @@ add_executable(EmergencyResponseSimulator
     src/curves/Spline.cpp
     src/curves/CatmullRom.cpp
     src/city/City.cpp
+    src/city/DayNight.cpp
     src/city/Environment.cpp
     src/city/Pedestrians.cpp
     src/city/RedLightCamera.cpp
