@@ -10,6 +10,7 @@
 #include "simulation/ClippingDemo.h"
 #include "simulation/CollisionSystem.h"
 #include "simulation/Mission.h"
+#include "simulation/RouteGuide.h"
 #include "simulation/TrafficSystem.h"
 
 int main() {
@@ -30,6 +31,7 @@ int main() {
     Ambulance ambulance(startPosition);
     ClippingDemo clippingDemo;
     Mission mission;
+    RouteGuide routeGuide(network);
     TrafficSystem traffic(network);
     RedLightCamera redLightCamera(network, trafficLights);
     CollisionSystem collisions;
@@ -93,12 +95,15 @@ int main() {
         traffic.update(deltaTime, trafficLights, {ambulance.footprint()});
         collisions.update(ambulance, city, traffic, deltaTime);
         mission.update(deltaTime, ambulance.position(), ambulance.speed());
+        routeGuide.update(deltaTime, ambulance.position(), mission.incidentPosition(),
+                          mission.state() == Mission::State::Active);
 
         window.clear(Colors::Background);
 
         city.draw(window, lineRenderer, graphicsDebug);
         environment.draw(window, graphicsDebug);
         trafficLights.draw(window, lineRenderer, graphicsDebug);
+        routeGuide.draw(window, lineRenderer, mission.colour(), graphicsDebug);
         mission.draw(window, lineRenderer, graphicsDebug);
         traffic.draw(window, lineRenderer, curveDebug, graphicsDebug);
         ambulance.draw(window, lineRenderer, graphicsDebug);
