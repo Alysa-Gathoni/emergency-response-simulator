@@ -57,6 +57,35 @@ void assistNeverFightsTheDriver() {
     CHECK(a.heading() > 5.0f && a.heading() < 90.0f);
 }
 
+void headOnBouncesBack() {
+    Ambulance a({500, 360});
+    a.resetTo({500, 360}, 0.0f);                 // facing +x
+    run(a, {1.0f, 0.0f, false}, 1.0f);
+    const float before = a.speed();
+    a.resolveCollision({-2.0f, 0.0f});           // wall ahead pushes back along -x
+    CHECK_NEAR(a.speed(), -0.3f * before, 0.5f);
+    CHECK(a.impact() > 0.0f);
+}
+
+void glancingHitSlides() {
+    Ambulance a({500, 360});
+    a.resetTo({500, 360}, 20.0f);                // 20 degrees towards a wall below
+    run(a, {1.0f, 0.0f, false}, 1.0f);
+    const float before = a.speed();
+    a.resolveCollision({0.0f, -2.0f});           // wall below pushes up
+    CHECK(a.speed() > 0.7f * before);            // keeps most of its speed
+    CHECK(a.heading() < 20.0f);                  // nose turned along the wall
+}
+
+void movingAwayIsUntouched() {
+    Ambulance a({500, 360});
+    a.resetTo({500, 360}, 180.0f);               // driving away from a wall on the right
+    run(a, {1.0f, 0.0f, false}, 1.0f);
+    const float before = a.speed();
+    a.resolveCollision({-1.0f, 0.0f});
+    CHECK_NEAR(a.speed(), before, 1e-3f);
+}
+
 }
 
 int main() {
@@ -64,5 +93,8 @@ int main() {
     steeringFadesWithSpeed();
     headingAssistStraightens();
     assistNeverFightsTheDriver();
+    headOnBouncesBack();
+    glancingHitSlides();
+    movingAwayIsUntouched();
     return check::failures();
 }

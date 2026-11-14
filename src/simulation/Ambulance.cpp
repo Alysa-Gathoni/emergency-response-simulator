@@ -31,6 +31,12 @@ constexpr float SteerFade = 110.0f;
 // ambulance straightens up after a turn instead of drifting into kerbs.
 constexpr float AssistWindow = 14.0f;        // degrees
 constexpr float AssistRate = 40.0f;          // degrees per second at speed
+
+// Collision response.
+constexpr float Restitution = 0.3f;          // share of the normal speed bounced back
+constexpr float Friction = 0.15f;            // share of the sliding speed lost
+constexpr float YawKick = 0.35f;             // how far a glancing hit turns the nose
+constexpr float ImpactDecay = 3.0f;          // impact feedback fades in 1/3 s
 }
 
 float Ambulance::maxSteerAt(float speed) {
@@ -161,6 +167,7 @@ void Ambulance::drive(const DrivingInput& input, float deltaTime) {
 
 void Ambulance::update(float deltaTime, const DrivingInput& input) {
     time_ += deltaTime;
+    impact_ = std::max(0.0f, impact_ - ImpactDecay * deltaTime);
     drive(input, deltaTime);
     syncModel();
 }
@@ -168,10 +175,49 @@ void Ambulance::update(float deltaTime, const DrivingInput& input) {
 void Ambulance::resolveCollision(Point separation) {
     position_.x += separation.x;
     position_.y += separation.y;
-    // Bounce back slightly: reverse a third of the speed.
-    speed_ = -speed_ * 0.3f;
+
+    const float length = std::hypot(separation.x, separation.y);
+    if (length < 1e-4f) { syncModel(); return; }
+
+    // Contact normal n points out of the obstacle. Split the velocity into
+    // a normal part (into the obstacle) and a tangential part (along it):
+    //     v_n = (v . n) n,     v_t = v - v_n
+    //     v'  = (1 - Friction) v_t - Restitution v_n
+    // Only an approaching hit (v . n < 0) is changed, so resting contact
+    // does not keep bouncing.
+    const Point n{separation.x / length, separation.y / length};
+    const float a = headingDegrees_ * PI / 180.0f;
+    const Point forward{std::cos(a), std::sin(a)};
+    const Point v{forward.x * speed_, forward.y * speed_};
+    const float vn = v.x * n.x + v.y * n.y;
+
+    if (vn < 0.0f) {
+        const Point normal{n.x * vn, n.y * vn};
+        const Point tangent{v.x - normal.x, v.y - normal.y};
+        const Point after{tangent.x * (1.0f - Friction) - normal.x * Restitution,
+                          tangent.y * (1.0f - Friction) - normal.y * Restitution};
+
+        // The bicycle model only moves along the heading, so keep the
+        // part of the new velocity along it.
+        speed_ = after.x * forward.x + after.y * forward.y;
+
+        // Glancing hit: the nose is pushed round to follow the obstacle.
+        const float along = std::hypot(tangent.x, tangent.y);
+        if (along > 1.0f) {
+            float turn = std::atan2(tangent.y, tangent.x) - a;
+            turn = std::atan2(std::sin(turn), std::cos(turn));      // wrap to -pi..pi
+            if (std::abs(turn) < PI / 3.0f)
+                headingDegrees_ += turn * YawKick * 180.0f / PI;
+        }
+
+        // Feedback: impact strength (sparks, later camera shake) and where.
+        impact_ = std::max(impact_, std::clamp(-vn / 120.0f, 0.2f, 1.0f));
+        contact_ = {position_.x - n.x * 18.0f, position_.y - n.y * 18.0f};
+    }
     syncModel();
 }
+
+float Ambulance::impact() const { return impact_; }
 
 void Ambulance::resetTo(Point position, float headingDegrees) {
     position_ = position;
@@ -190,6 +236,18 @@ void Ambulance::draw(IRenderer& target,
                      const LineRenderer& lines,
                      bool debug) const {
     root_->draw(target, lines, Mat3::identity(), debug);
+
+    // Sparks at the last contact point, fading with the impact strength.
+    if (impact_ > 0.05f) {
+        const Rgba spark(255, 220, 90, static_cast<int>(255 * std::min(1.0f, impact_ * 1.5f)));
+        for (int k = 0; k < 8; ++k) {
+            const float ang = k * PI / 4.0f + time_ * 7.0f;
+            const float reach = 6.0f + 14.0f * impact_;
+            lines.draw(target, contact_,
+                       {contact_.x + std::cos(ang) * reach, contact_.y + std::sin(ang) * reach},
+                       spark, 1.0f);
+        }
+    }
 
     if (debug) {
         ShapeAlgorithms::drawPoints(

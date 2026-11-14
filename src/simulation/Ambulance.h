@@ -52,9 +52,13 @@ public:
     // Corners of the body in world space (for collisions and traffic).
     std::vector<Point> footprint() const;
 
-    // Collision response: push out of the obstacle along `separation`,
-    // bounce back slightly and lose most of the speed.
+    // Collision response: push out of the obstacle along `separation`
+    // (pointing out of it), then an impulse along the contact normal:
+    // head-on hits bounce back, glancing hits slide and turn the nose.
     void resolveCollision(Point separation);
+
+    // 0..1 strength of the most recent hit, fading over about 1/3 s.
+    float impact() const;
 
     // Place the ambulance (mission restart).
     void resetTo(Point position, float headingDegrees);
@@ -76,6 +80,8 @@ private:
     float time_{0.0f};
     float speed_{0.0f};
     bool braking_{false};
+    float impact_{0.0f};
+    Point contact_{0.0f, 0.0f};
 
     void buildModel();
     void syncModel();
