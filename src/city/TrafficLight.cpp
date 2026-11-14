@@ -6,14 +6,14 @@
 
 namespace {
 
-sf::Color bulbColor(Signal lit, Signal bulb) {
-    if (lit != bulb) return sf::Color(70, 70, 70);
+Rgba bulbColor(Signal lit, Signal bulb) {
+    if (lit != bulb) return Rgba(70, 70, 70);
     switch (bulb) {
-        case Signal::Red:    return sf::Color(235, 70, 70);
-        case Signal::Yellow: return sf::Color(240, 205, 70);
-        case Signal::Green:  return sf::Color(80, 215, 105);
+        case Signal::Red:    return Rgba(235, 70, 70);
+        case Signal::Yellow: return Rgba(240, 205, 70);
+        case Signal::Green:  return Rgba(80, 215, 105);
     }
-    return sf::Color::White;
+    return Rgba::White;
 }
 
 Point offset(Point p, Point d, float s) { return {p.x + d.x * s, p.y + d.y * s}; }
@@ -53,8 +53,8 @@ const SignalController& TrafficLights::controller(int intersection) const {
     return controllers_[static_cast<std::size_t>(intersection)];
 }
 
-std::vector<std::pair<Point, sf::Color>> TrafficLights::litBulbs() const {
-    std::vector<std::pair<Point, sf::Color>> result;
+std::vector<std::pair<Point, Rgba>> TrafficLights::litBulbs() const {
+    std::vector<std::pair<Point, Rgba>> result;
     for (const StopLine& stop : network_.stopLines()) {
         const Signal lit = signalFor(stop);
         const Point d = headingVector(stop.approach);
@@ -65,7 +65,7 @@ std::vector<std::pair<Point, sf::Color>> TrafficLights::litBulbs() const {
     return result;
 }
 
-void TrafficLights::draw(sf::RenderTarget& target,
+void TrafficLights::draw(IRenderer& target,
                          const LineRenderer& lines,
                          bool debug) const {
     for (const StopLine& stop : network_.stopLines()) {
@@ -86,8 +86,8 @@ void TrafficLights::draw(sf::RenderTarget& target,
             offset(offset(centre, d, -16.0f), side,  7.0f)
         });
         PolygonFill::draw(target, housing.vertices(), lines,
-                          sf::Color(28, 28, 30), false);
-        housing.drawOutline(target, lines, sf::Color(170, 170, 170), 1.0f);
+                          Rgba(28, 28, 30), false);
+        housing.drawOutline(target, lines, Rgba(170, 170, 170), 1.0f);
 
         // Red nearest the junction, green furthest from it.
         const Point red = offset(centre, d, 10.0f);

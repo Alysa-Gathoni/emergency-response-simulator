@@ -11,17 +11,17 @@ constexpr float MinSpawnDistance = 260.0f;   // never right next to the ambulanc
 constexpr float ResultPause = 2.5f;
 
 struct IncidentInfo {
-    sf::Color colour;
+    Rgba colour;
     float timeLimit;   // seconds
 };
 
 IncidentInfo infoFor(IncidentType type) {
     switch (type) {
-        case IncidentType::Medical:  return {sf::Color(235, 70, 70), 60.0f};
-        case IncidentType::Fire:     return {sf::Color(245, 150, 40), 50.0f};
-        case IncidentType::Accident: return {sf::Color(240, 210, 60), 70.0f};
+        case IncidentType::Medical:  return {Rgba(235, 70, 70), 60.0f};
+        case IncidentType::Fire:     return {Rgba(245, 150, 40), 50.0f};
+        case IncidentType::Accident: return {Rgba(240, 210, 60), 70.0f};
     }
-    return {sf::Color::White, 60.0f};
+    return {Rgba::White, 60.0f};
 }
 
 }
@@ -97,7 +97,7 @@ void Mission::update(float deltaTime, Point ambulancePosition, float ambulanceSp
     }
 }
 
-void Mission::draw(sf::RenderTarget& target, const LineRenderer&, bool debug) const {
+void Mission::draw(IRenderer& target, const LineRenderer&, bool debug) const {
     if (state_ == State::Active) marker_.draw(target, debug);
 
     const Point c = marker_.position();
@@ -112,12 +112,12 @@ void Mission::draw(sf::RenderTarget& target, const LineRenderer&, bool debug) co
             if (a < 0.0f) a += 2.0f * PI;
             if (a <= limit) arc.push_back(p);
         }
-        ShapeAlgorithms::drawPoints(target, arc, sf::Color(90, 230, 120), 3.0f);
+        ShapeAlgorithms::drawPoints(target, arc, Rgba(90, 230, 120), 3.0f);
     }
 
     if (state_ == State::Arrived) {
         ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::midpointCircle(c, 30),
-                                    sf::Color(90, 230, 120), 4.0f);
+                                    Rgba(90, 230, 120), 4.0f);
     }
 
     if (debug && state_ == State::Active) {
@@ -129,7 +129,7 @@ void Mission::draw(sf::RenderTarget& target, const LineRenderer&, bool debug) co
 
 Mission::State Mission::state() const { return state_; }
 IncidentType Mission::type() const { return type_; }
-sf::Color Mission::colour() const { return infoFor(type_).colour; }
+Rgba Mission::colour() const { return infoFor(type_).colour; }
 Point Mission::incidentPosition() const { return marker_.position(); }
 float Mission::elapsed() const { return elapsed_; }
 float Mission::timeLimit() const { return infoFor(type_).timeLimit; }

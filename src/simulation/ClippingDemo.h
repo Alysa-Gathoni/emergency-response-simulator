@@ -1,11 +1,11 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include "../lines/LineRenderer.h"
 #include "../rasterization/Clipping.h"
 
 class ClippingDemo {
 public:
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const LineRenderer& lines,
               bool enabled) const;
 

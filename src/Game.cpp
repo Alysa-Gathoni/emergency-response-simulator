@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "core/Color.h"
 #include "rasterization/PolygonFill.h"
+#include "ui/PixelFont.h"
 #include "ui/SevenSegment.h"
 #include <algorithm>
 #include <cctype>
@@ -9,6 +10,18 @@
 
 namespace {
 constexpr float MaxFrameTime = 0.25f;   // avoid a "spiral of death" after a stall
+
+// Input stays in the application layer: scene modules never see SFML.
+DrivingInput readDrivingKeys() {
+    using K = sf::Keyboard;
+    DrivingInput in;
+    if (K::isKeyPressed(K::W) || K::isKeyPressed(K::Up))    in.throttle += 1.0f;
+    if (K::isKeyPressed(K::S) || K::isKeyPressed(K::Down))  in.throttle -= 1.0f;
+    if (K::isKeyPressed(K::A) || K::isKeyPressed(K::Left))  in.steer -= 1.0f;
+    if (K::isKeyPressed(K::D) || K::isKeyPressed(K::Right)) in.steer += 1.0f;
+    in.handbrake = K::isKeyPressed(K::Space);
+    return in;
+}
 }
 
 Game::Game() = default;
@@ -16,10 +29,8 @@ Game::Game() = default;
 bool Game::handleKey(sf::Keyboard::Key key) {
     switch (key) {
         case sf::Keyboard::Escape: return false;
-        case sf::Keyboard::L:
-            lines_.setMode(lines_.getMode() == LineMode::Bresenham ? LineMode::DDA
-                                                                    : LineMode::Bresenham);
-            break;
+        case sf::Keyboard::L: lines_.nextMode(); break;
+        case sf::Keyboard::O: useOpenGL_ = !useOpenGL_; break;
         case sf::Keyboard::G:
             graphicsDebug_ = !graphicsDebug_;
             lines_.setDebug(graphicsDebug_);
@@ -66,20 +77,20 @@ void Game::step(float dt, const DrivingInput& input) {
                        mission_.state() == Mission::State::Active);
 }
 
-void Game::drawNightLights(sf::RenderTarget& target) const {
+void Game::drawNightLights(IRenderer& target) const {
     std::vector<DayNight::Light> lights;
     for (const auto& v : traffic_.vehicles()) {
         const Point p = v.position();
         const Point d = v.direction();
         const float front = v.halfLength();
         lights.push_back({{p.x + d.x * front, p.y + d.y * front}, d,
-                          sf::Color(255, 240, 180)});
+                          Rgba(255, 240, 180)});
     }
 
     const float a = ambulance_.heading() * 3.14159265f / 180.0f;
     const Point d{std::cos(a), std::sin(a)};
     const Point p = ambulance_.position();
-    lights.push_back({{p.x + d.x * 30.0f, p.y + d.y * 30.0f}, d, sf::Color(255, 250, 220)});
+    lights.push_back({{p.x + d.x * 30.0f, p.y + d.y * 30.0f}, d, Rgba(255, 250, 220)});
 
     for (const auto& [position, colour] : trafficLights_.litBulbs())
         lights.push_back({position, {0.0f, 0.0f}, colour});
@@ -115,12 +126,20 @@ HudData Game::hudData() const {
     h.missed = mission_.missed();
     h.arrived = mission_.state() == Mission::State::Arrived;
     h.late = mission_.state() == Mission::State::Missed;
-    h.bresenham = lines_.getMode() == LineMode::Bresenham;
+    h.lineMode = lines_.getMode() == LineMode::Bresenham ? 0
+               : lines_.getMode() == LineMode::DDA ? 1 : 2;
     return h;
 }
 
-void Game::render(sf::RenderTarget& target) const {
-    target.clear(Colors::Background);
+IRenderer& Game::renderer(sf::RenderTarget& target) {
+    software_.setTarget(target);
+    gl_.setTarget(target);
+    if (useOpenGL_) return gl_;
+    return software_;
+}
+
+void Game::render(IRenderer& target) const {
+    target.beginFrame(Colors::Background);
 
     city_.draw(target, lines_, graphicsDebug_);
     environment_.draw(target, graphicsDebug_);
@@ -148,15 +167,19 @@ void Game::render(sf::RenderTarget& target) const {
         const float x = 550.0f - w * 0.5f;
         PolygonFill::draw(target, {{x - 20, 300}, {x + w + 20, 300},
                                    {x + w + 20, 378}, {x - 20, 378}},
-                          lines_, sf::Color(12, 16, 22, 200), false);
+                          lines_, Rgba(12, 16, 22, 200), false);
         SevenSegment::drawText(target, lines_, "PAUSE", {x, 315}, h,
-                               sf::Color(240, 200, 80));
+                               Rgba(240, 200, 80));
     }
 
     // Objective and controls last, so they are never covered by the scene.
     const float bannerLeft = HelpPanel::Left + help_.width() + 12.0f;
     banner_.draw(target, lines_, bannerData(), bannerLeft);
     help_.draw(target, lines_);
+
+    // Which backend drew this frame (for the comparison screenshots).
+    PixelFont::drawText(target, target.name(), {12, 672}, 2, Rgba(140, 150, 160));
+    target.endFrame();
 }
 
 void Game::saveScreenshot(const sf::RenderWindow& window) {
@@ -197,8 +220,7 @@ int Game::run() {
 
         // Driving keys only count while the window has focus (the keyboard
         // state is global, so other applications would steer otherwise).
-        const DrivingInput input = window.hasFocus() ? Ambulance::readKeyboard()
-                                                     : DrivingInput{};
+        const DrivingInput input = window.hasFocus() ? readDrivingKeys() : DrivingInput{};
         // The panel is open on start; the first press of the accelerator
         // folds it away (H brings it back), the banner keeps the goal shown.
         if (!helpAutoHidden_ && input.throttle > 0.0f) {
@@ -211,7 +233,7 @@ int Game::run() {
             accumulator -= FixedStep;
         }
 
-        render(window);
+        render(renderer(window));
         window.display();
     }
     return 0;
@@ -235,7 +257,7 @@ int Game::renderScreenshot(const std::string& path, float seconds, const std::st
     if (!canvas.create(static_cast<unsigned>(RoadNetwork::WorldWidth),
                        static_cast<unsigned>(RoadNetwork::WorldHeight)))
         return 1;
-    render(canvas);
+    render(renderer(canvas));
     canvas.display();
     return canvas.getTexture().copyToImage().saveToFile(path) ? 0 : 1;
 }

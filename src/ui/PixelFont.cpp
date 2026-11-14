@@ -95,8 +95,8 @@ std::vector<std::pair<Point, Point>> spans(const std::string& text,
     return result;
 }
 
-void drawText(sf::RenderTarget& target, const std::string& text,
-              Point origin, int scale, sf::Color colour) {
+void drawText(IRenderer& target, const std::string& text,
+              Point origin, int scale, Rgba colour) {
     Raster::spans(target, spans(text, origin, scale), colour);
 }
 

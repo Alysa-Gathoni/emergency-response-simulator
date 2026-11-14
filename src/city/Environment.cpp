@@ -1,7 +1,7 @@
 #include "Environment.h"
 #include "../shapes/CircleEllipse.h"
 
-void Environment::draw(sf::RenderTarget& target, bool debug) const {
+void Environment::draw(IRenderer& target, bool debug) const {
     // Trees stand in the two parks of the district.
     const Point treePositions[] = {
         {60,642}, {124,670}, {190,646}, {1014,50}, {1058,84}
@@ -12,13 +12,13 @@ void Environment::draw(sf::RenderTarget& target, bool debug) const {
         ShapeAlgorithms::drawPoints(
             target,
             ShapeAlgorithms::filledEllipse(p, 18, 27),
-            sf::Color(55,130,70),
+            Rgba(55,130,70),
             1.0f
         );
         ShapeAlgorithms::drawPoints(
             target,
             ShapeAlgorithms::midpointEllipse(p, 18, 27),
-            sf::Color(40,100,55),
+            Rgba(40,100,55),
             2.0f
         );
 
@@ -26,7 +26,7 @@ void Environment::draw(sf::RenderTarget& target, bool debug) const {
         ShapeAlgorithms::drawPoints(
             target,
             ShapeAlgorithms::filledCircle({p.x - 6, p.y - 8}, 8),
-            sf::Color(95,185,105),
+            Rgba(95,185,105),
             1.0f
         );
 
@@ -34,7 +34,7 @@ void Environment::draw(sf::RenderTarget& target, bool debug) const {
             ShapeAlgorithms::drawPoints(
                 target,
                 ShapeAlgorithms::midpointEllipse(p, 23, 32),
-                sf::Color(80,220,170),
+                Rgba(80,220,170),
                 1.0f
             );
         }

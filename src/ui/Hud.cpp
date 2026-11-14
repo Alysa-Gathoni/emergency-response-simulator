@@ -9,15 +9,15 @@
 
 namespace {
 
-const sf::Color Panel(12, 16, 22, 200);
-const sf::Color Frame(90, 100, 112);
-const sf::Color Label(120, 140, 150);
-const sf::Color Value(120, 235, 180);
-const sf::Color Warning(250, 90, 70);
-const sf::Color Unlit(40, 60, 54, 150);
+const Rgba Panel(12, 16, 22, 200);
+const Rgba Frame(90, 100, 112);
+const Rgba Label(120, 140, 150);
+const Rgba Value(120, 235, 180);
+const Rgba Warning(250, 90, 70);
+const Rgba Unlit(40, 60, 54, 150);
 
 const char* IncidentNames[] = {"AID", "FIRE", "CRASH"};
-const sf::Color IncidentColours[] = {
+const Rgba IncidentColours[] = {
     {235, 70, 70}, {245, 150, 40}, {240, 210, 60}
 };
 
@@ -25,9 +25,9 @@ std::vector<Point> rect(float l, float t, float r, float b) {
     return {{l, t}, {r, t}, {r, b}, {l, b}};
 }
 
-void row(sf::RenderTarget& target, const LineRenderer& lines,
+void row(IRenderer& target, const LineRenderer& lines,
          float x, float y, const std::string& label, const std::string& value,
-         sf::Color colour) {
+         Rgba colour) {
     SevenSegment::drawText(target, lines, label, {x, y + 4}, 12.0f, Label);
     SevenSegment::drawText(target, lines, value, {x + 70, y}, 18.0f, colour, Unlit);
 }
@@ -49,7 +49,7 @@ int Hud::metres(float pixels) {
     return static_cast<int>(std::lround(pixels * MetresPerPixel));
 }
 
-void Hud::draw(sf::RenderTarget& target, const LineRenderer& lines,
+void Hud::draw(IRenderer& target, const LineRenderer& lines,
                const HudData& d) const {
     // Translucent panel in the top-right corner (scan-line fill + outline).
     const float left = 870, top = 8, right = 1092, bottom = 206;
@@ -90,7 +90,7 @@ void Hud::draw(sf::RenderTarget& target, const LineRenderer& lines,
                       lines, hurry ? Warning : Value, false);
 
     // Line algorithm currently in use (L key), bottom-left corner.
-    SevenSegment::drawText(target, lines, d.bresenham ? "BRES" : "DDA", {12, 694}, 14.0f,
+    SevenSegment::drawText(target, lines, d.lineMode == 0 ? "BRES" : d.lineMode == 1 ? "DDA" : "API", {12, 694}, 14.0f,
                            Label);
 
     // Result banner in the middle of the screen.

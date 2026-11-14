@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <memory>
 #include <vector>
 #include "TrafficVehicle.h"
@@ -25,7 +25,7 @@ public:
     // positions, types and speeds as at launch). Used by the restart key.
     void reset();
 
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const LineRenderer& lines,
               bool curveDebug,
               bool trafficDebug) const;
@@ -42,7 +42,7 @@ private:
     unsigned seed_;
 
     void spawn(int count, unsigned seed);
-    void drawStages(sf::RenderTarget& target, const LineRenderer& lines) const;
+    void drawStages(IRenderer& target, const LineRenderer& lines) const;
 
     std::shared_ptr<const TrafficRoute> makeRoute(const std::vector<Point>& waypoints) const;
     void plan(const TrafficLights& lights,

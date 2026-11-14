@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <memory>
 #include <vector>
 #include "VehicleType.h"
@@ -51,7 +51,7 @@ public:
     bool braking() const;             // brake lights on
     int indicator() const;            // -1 left, 0 none, +1 right (turn ahead)
 
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const LineRenderer& lines,
               bool curveDebug,
               bool trafficDebug) const;
@@ -73,5 +73,5 @@ private:
     Point blockingPoint_{};
 
     void updateStage();
-    void drawBody(sf::RenderTarget& target, const LineRenderer& lines) const;
+    void drawBody(IRenderer& target, const LineRenderer& lines) const;
 };

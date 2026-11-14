@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include "RoadNetwork.h"
 #include "TrafficLight.h"
 #include "../lines/LineRenderer.h"
@@ -18,7 +18,7 @@ public:
     int violations() const;
     void reset();
 
-    void draw(sf::RenderTarget& target, const LineRenderer& lines) const;
+    void draw(IRenderer& target, const LineRenderer& lines) const;
 
 private:
     const RoadNetwork& network_;

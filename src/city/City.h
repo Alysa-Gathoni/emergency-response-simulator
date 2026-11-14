@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <vector>
 #include "RoadNetwork.h"
 #include "../lines/LineRenderer.h"
@@ -9,7 +9,7 @@ class City {
 public:
     explicit City(const RoadNetwork& network);
 
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const LineRenderer& lines,
               bool polygonDebug) const;
 
@@ -23,6 +23,6 @@ private:
     Polygon hospital_;
     std::vector<Rect> parks_;
 
-    void drawRoads(sf::RenderTarget& target, const LineRenderer& lines) const;
-    void drawMarkings(sf::RenderTarget& target, const LineRenderer& lines) const;
+    void drawRoads(IRenderer& target, const LineRenderer& lines) const;
+    void drawMarkings(IRenderer& target, const LineRenderer& lines) const;
 };

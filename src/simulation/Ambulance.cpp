@@ -62,30 +62,30 @@ void Ambulance::buildModel() {
     }
 
     root_->add(makeRect("body", -30, -16, 30, 16,
-                        sf::Color(225, 225, 225), Colors::Ambulance, 2.0f));
+                        Rgba(225, 225, 225), Colors::Ambulance, 2.0f));
     root_->add(makeRect("cab", 5, -13, 27, 13,
-                        sf::Color(160, 45, 45), Colors::AmbulanceAccent, 1.0f));
-    root_->add(makeRect("windscreen", 21, -11, 25, 11, sf::Color(60, 80, 100)));
+                        Rgba(160, 45, 45), Colors::AmbulanceAccent, 1.0f));
+    root_->add(makeRect("windscreen", 21, -11, 25, 11, Rgba(60, 80, 100)));
 
     // Roof cross made of two bars.
     root_->add(makeRect("cross-h", -18, -2, -4, 2, Colors::AmbulanceAccent));
     root_->add(makeRect("cross-v", -13, -7, -9, 7, Colors::AmbulanceAccent));
 
     SceneNode* lightBar = root_->add(makeGroup("light-bar", Mat3::translation(1, 0)));
-    lightBar->add(makeRect("housing", -2, -13, 2, 13, sf::Color(40, 40, 44)));
-    redLight_ = lightBar->add(makeDisc("light-red", {0, -8}, 3, sf::Color::Red));
-    blueLight_ = lightBar->add(makeDisc("light-blue", {0, 8}, 3, sf::Color::Blue));
+    lightBar->add(makeRect("housing", -2, -13, 2, 13, Rgba(40, 40, 44)));
+    redLight_ = lightBar->add(makeDisc("light-red", {0, -8}, 3, Rgba::Red));
+    blueLight_ = lightBar->add(makeDisc("light-blue", {0, 8}, 3, Rgba::Blue));
 
     // Rotating beacon: a beam polygon spun by a time-driven rotation matrix.
     beacon_ = root_->add(makeGroup("beacon", Mat3::translation(-24, 0)));
     auto beam = std::make_unique<SceneNode>("beam", SceneNode::Kind::Polygon);
     beam->shape = {{0, 0}, {11, -4}, {11, 4}};
-    beam->fill = sf::Color(120, 170, 255, 170);
+    beam->fill = Rgba(120, 170, 255, 170);
     beacon_->add(std::move(beam));
-    beacon_->add(makeDisc("beacon-core", {0, 0}, 2, sf::Color(200, 220, 255)));
+    beacon_->add(makeDisc("beacon-core", {0, 0}, 2, Rgba(200, 220, 255)));
 
-    brakeLights_[0] = root_->add(makeRect("brake-left", -31, -14, -28, -9, sf::Color(90, 20, 20)));
-    brakeLights_[1] = root_->add(makeRect("brake-right", -31, 9, -28, 14, sf::Color(90, 20, 20)));
+    brakeLights_[0] = root_->add(makeRect("brake-left", -31, -14, -28, -9, Rgba(90, 20, 20)));
+    brakeLights_[1] = root_->add(makeRect("brake-right", -31, 9, -28, 14, Rgba(90, 20, 20)));
 }
 
 void Ambulance::syncModel() {
@@ -100,24 +100,13 @@ void Ambulance::syncModel() {
 
     // Siren lights alternate four times a second.
     const bool phase = std::fmod(time_, 0.5f) < 0.25f;
-    redLight_->fill = phase ? sf::Color(255, 60, 60) : sf::Color(90, 25, 25);
-    blueLight_->fill = phase ? sf::Color(25, 35, 90) : sf::Color(70, 120, 255);
+    redLight_->fill = phase ? Rgba(255, 60, 60) : Rgba(90, 25, 25);
+    blueLight_->fill = phase ? Rgba(25, 35, 90) : Rgba(70, 120, 255);
 
     beacon_->children.front()->local = Mat3::rotation(time_ * 6.0f);
 
     for (SceneNode* light : brakeLights_)
-        light->fill = braking_ ? sf::Color(255, 50, 40) : sf::Color(90, 20, 20);
-}
-
-DrivingInput Ambulance::readKeyboard() {
-    using K = sf::Keyboard;
-    DrivingInput in;
-    if (K::isKeyPressed(K::W) || K::isKeyPressed(K::Up))    in.throttle += 1.0f;
-    if (K::isKeyPressed(K::S) || K::isKeyPressed(K::Down))  in.throttle -= 1.0f;
-    if (K::isKeyPressed(K::A) || K::isKeyPressed(K::Left))  in.steer -= 1.0f;
-    if (K::isKeyPressed(K::D) || K::isKeyPressed(K::Right)) in.steer += 1.0f;
-    in.handbrake = K::isKeyPressed(K::Space);
-    return in;
+        light->fill = braking_ ? Rgba(255, 50, 40) : Rgba(90, 20, 20);
 }
 
 void Ambulance::drive(const DrivingInput& input, float deltaTime) {
@@ -170,10 +159,6 @@ void Ambulance::drive(const DrivingInput& input, float deltaTime) {
     wheelSpin_ += distance / WheelRadius;
 }
 
-void Ambulance::update(float deltaTime) {
-    update(deltaTime, readKeyboard());
-}
-
 void Ambulance::update(float deltaTime, const DrivingInput& input) {
     time_ += deltaTime;
     drive(input, deltaTime);
@@ -201,7 +186,7 @@ std::vector<Point> Ambulance::footprint() const {
         {-30, -16}, {30, -16}, {30, 16}, {-30, 16}});
 }
 
-void Ambulance::draw(sf::RenderTarget& target,
+void Ambulance::draw(IRenderer& target,
                      const LineRenderer& lines,
                      bool debug) const {
     root_->draw(target, lines, Mat3::identity(), debug);

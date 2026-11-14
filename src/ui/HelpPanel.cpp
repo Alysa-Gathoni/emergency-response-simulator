@@ -7,14 +7,14 @@
 
 namespace {
 
-const sf::Color Panel(12, 16, 22, 215);
-const sf::Color Header(32, 40, 52, 235);
-const sf::Color Frame(90, 100, 112);
-const sf::Color Title(240, 200, 80);
-const sf::Color Goal(240, 200, 80);
-const sf::Color Key(120, 235, 180);
-const sf::Color Action(220, 226, 232);
-const sf::Color Hint(140, 150, 160);
+const Rgba Panel(12, 16, 22, 215);
+const Rgba Header(32, 40, 52, 235);
+const Rgba Frame(90, 100, 112);
+const Rgba Title(240, 200, 80);
+const Rgba Goal(240, 200, 80);
+const Rgba Key(120, 235, 180);
+const Rgba Action(220, 226, 232);
+const Rgba Hint(140, 150, 160);
 
 constexpr int Scale = 2;                 // 5x7 glyphs drawn at 10x14
 constexpr float Padding = 12.0f;
@@ -46,7 +46,8 @@ const std::vector<Row> Rows = {
     {"G",                                  "DEBUG VIEW"},
     {"B",                                  "ROUTE CURVES"},
     {"C",                                  "CLIPPING DEMO"},
-    {"L",                                  "DDA / BRESENHAM"},
+    {"L",                                  "LINE ALGORITHM"},
+    {"O",                                  "OPENGL / SOFTWARE"},
     {"F12",                                "SCREENSHOT"},
     {"ESC",                                "QUIT"},
 };
@@ -74,7 +75,7 @@ bool HelpPanel::headerContains(Point p) const {
         && p.y >= Top && p.y <= Top + HeaderHeight;
 }
 
-void HelpPanel::draw(sf::RenderTarget& target, const LineRenderer& lines) const {
+void HelpPanel::draw(IRenderer& target, const LineRenderer& lines) const {
     const float right = Left + width();
     const float bottom = Top + height();
     const float headerBottom = Top + HeaderHeight;

@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <memory>
 #include <vector>
 #include "SceneNode.h"
@@ -31,14 +31,11 @@ class Ambulance {
 public:
     explicit Ambulance(Point startPosition);
 
-    void update(float deltaTime);
     void update(float deltaTime, const DrivingInput& input);
 
-    // Reads the keyboard (W/S or arrows, A/D, Space) into a DrivingInput.
-    static DrivingInput readKeyboard();
     void drive(const DrivingInput& input, float deltaTime);
 
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const LineRenderer& lines,
               bool debug) const;
 

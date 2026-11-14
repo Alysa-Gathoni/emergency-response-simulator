@@ -1,13 +1,13 @@
 #pragma once
-#include <SFML/Graphics/Color.hpp>
+#include "Rgba.h"
 
 namespace Colors {
-    const sf::Color Background(32, 38, 46);
-    const sf::Color Road(65, 70, 78);
-    const sf::Color RoadLine(235, 224, 180);
-    const sf::Color Building(180, 185, 192);
-    const sf::Color Hospital(215, 220, 225);
-    const sf::Color Ambulance(238, 238, 238);
-    const sf::Color AmbulanceAccent(205, 55, 55);
-    const sf::Color Debug(80, 220, 170);
+    const Rgba Background(32, 38, 46);
+    const Rgba Road(65, 70, 78);
+    const Rgba RoadLine(235, 224, 180);
+    const Rgba Building(180, 185, 192);
+    const Rgba Hospital(215, 220, 225);
+    const Rgba Ambulance(238, 238, 238);
+    const Rgba AmbulanceAccent(205, 55, 55);
+    const Rgba Debug(80, 220, 170);
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <vector>
 #include "../core/Point.h"
 #include "../lines/LineRenderer.h"
@@ -23,17 +23,17 @@ public:
 
     float timeOfDay() const;         // 0..1, 0.5 = midnight
     float darkness() const;          // 0 (day) .. 1 (full night)
-    sf::Color tint() const;          // overlay colour incl. alpha
+    Rgba tint() const;          // overlay colour incl. alpha
 
     // A light source for the after-overlay pass.
     struct Light {
         Point position;
         Point direction;   // unit vector; zero for a round glow
-        sf::Color colour;
+        Rgba colour;
     };
 
-    void drawOverlay(sf::RenderTarget& target, const LineRenderer& lines) const;
-    void drawLights(sf::RenderTarget& target, const LineRenderer& lines,
+    void drawOverlay(IRenderer& target, const LineRenderer& lines) const;
+    void drawLights(IRenderer& target, const LineRenderer& lines,
                     const std::vector<Light>& lights, bool debug) const;
 
 private:

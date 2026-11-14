@@ -18,15 +18,15 @@ Point transformLocal(Point centre, Point dir, float lx, float ly) {
     };
 }
 
-sf::Color limiterColor(SpeedLimiter reason) {
+Rgba limiterColor(SpeedLimiter reason) {
     switch (reason) {
-        case SpeedLimiter::Free:   return sf::Color(80, 220, 170);
-        case SpeedLimiter::Corner: return sf::Color(90, 160, 240);
-        case SpeedLimiter::Signal: return sf::Color(235, 70, 70);
-        case SpeedLimiter::Leader: return sf::Color(240, 170, 60);
-        case SpeedLimiter::Stage:  return sf::Color(220, 90, 200);
+        case SpeedLimiter::Free:   return Rgba(80, 220, 170);
+        case SpeedLimiter::Corner: return Rgba(90, 160, 240);
+        case SpeedLimiter::Signal: return Rgba(235, 70, 70);
+        case SpeedLimiter::Leader: return Rgba(240, 170, 60);
+        case SpeedLimiter::Stage:  return Rgba(220, 90, 200);
     }
-    return sf::Color::White;
+    return Rgba::White;
 }
 
 }
@@ -147,7 +147,7 @@ int TrafficVehicle::indicator() const {
     return 0;
 }
 
-void TrafficVehicle::drawBody(sf::RenderTarget& target,
+void TrafficVehicle::drawBody(IRenderer& target,
                               const LineRenderer& lines) const {
     const Point c = position();
     const Point d = direction();
@@ -159,7 +159,7 @@ void TrafficVehicle::drawBody(sf::RenderTarget& target,
     VehicleModels::draw(target, lines, pose);
 }
 
-void TrafficVehicle::draw(sf::RenderTarget& target,
+void TrafficVehicle::draw(IRenderer& target,
                           const LineRenderer& lines,
                           bool curveDebug,
                           bool trafficDebug) const {
@@ -173,7 +173,7 @@ void TrafficVehicle::draw(sf::RenderTarget& target,
 
     if (trafficDebug) {
         // Target speed as a vector ahead of the car, coloured by what limits it.
-        const sf::Color c = limiterColor(limiter_);
+        const Rgba c = limiterColor(limiter_);
         const float len = 10.0f + targetSpeed_ * 0.5f;
         lines.draw(target, centre, {centre.x + dir.x * len, centre.y + dir.y * len}, c, 2.0f);
         if (limiter_ == SpeedLimiter::Signal || limiter_ == SpeedLimiter::Leader)
@@ -188,14 +188,14 @@ void TrafficVehicle::draw(sf::RenderTarget& target,
 
     for (const auto& segment : path.segments()) {
         // Control polygon
-        lines.draw(target, segment.p0, segment.p1, sf::Color(140, 140, 140), 1.0f);
-        lines.draw(target, segment.p1, segment.p2, sf::Color(140, 140, 140), 1.0f);
-        lines.draw(target, segment.p2, segment.p3, sf::Color(140, 140, 140), 1.0f);
+        lines.draw(target, segment.p0, segment.p1, Rgba(140, 140, 140), 1.0f);
+        lines.draw(target, segment.p1, segment.p2, Rgba(140, 140, 140), 1.0f);
+        lines.draw(target, segment.p2, segment.p3, Rgba(140, 140, 140), 1.0f);
 
         for (Point p : {segment.p0, segment.p1, segment.p2, segment.p3}) {
             ShapeAlgorithms::drawPoints(
                 target, ShapeAlgorithms::filledCircle(p, 3),
-                sf::Color(235, 190, 70), 1.0f);
+                Rgba(235, 190, 70), 1.0f);
         }
     }
 
@@ -203,6 +203,6 @@ void TrafficVehicle::draw(sf::RenderTarget& target,
     for (Point knot : path.knots()) {
         ShapeAlgorithms::drawPoints(
             target, ShapeAlgorithms::filledCircle(knot, 6),
-            sf::Color(220, 90, 200), 1.0f);
+            Rgba(220, 90, 200), 1.0f);
     }
 }

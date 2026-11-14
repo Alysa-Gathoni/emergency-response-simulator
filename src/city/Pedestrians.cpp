@@ -9,11 +9,11 @@ namespace {
 constexpr float CrossingLength = 2.0f * (RoadNetwork::HalfWidth + 10.0f);
 constexpr int MaxWaitingPerKerb = 3;
 
-const sf::Color Clothes[] = {
+const Rgba Clothes[] = {
     {200, 70, 70}, {70, 120, 200}, {230, 180, 60}, {90, 170, 110},
     {170, 90, 180}, {225, 225, 225}
 };
-const sf::Color Skin[] = {{92, 60, 40}, {120, 80, 52}, {70, 46, 32}};
+const Rgba Skin[] = {{92, 60, 40}, {120, 80, 52}, {70, 46, 32}};
 
 SignalGroup other(SignalGroup g) {
     return g == SignalGroup::NorthSouth ? SignalGroup::EastWest : SignalGroup::NorthSouth;
@@ -113,18 +113,18 @@ std::vector<std::vector<Point>> Pedestrians::footprints() const {
     return result;
 }
 
-void Pedestrians::draw(sf::RenderTarget& target, const LineRenderer& lines,
+void Pedestrians::draw(IRenderer& target, const LineRenderer& lines,
                        const TrafficLights& lights, bool debug) const {
     // Pedestrian signal lamps at both ends of every crossing.
     for (const Crosswalk& cw : network_.crosswalks()) {
-        const sf::Color lamp = walkAllowed(cw, lights) ? sf::Color(90, 230, 120)
-                                                       : sf::Color(230, 70, 60);
+        const Rgba lamp = walkAllowed(cw, lights) ? Rgba(90, 230, 120)
+                                                       : Rgba(230, 70, 60);
         // Lamps stand on the corner, just outside the zebra stripes.
         const Point arm = headingVector(cw.arm);
         for (Point kerb : {cw.start, cw.end}) {
             const Point end{kerb.x + arm.x * 13.0f, kerb.y + arm.y * 13.0f};
             ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(end, 3),
-                                        sf::Color(30, 30, 32), 1.0f);
+                                        Rgba(30, 30, 32), 1.0f);
             ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(end, 2),
                                         lamp, 1.0f);
         }
@@ -143,7 +143,7 @@ void Pedestrians::draw(sf::RenderTarget& target, const LineRenderer& lines,
             const Point foot{p.x + side.x * s + d.x * swing * s,
                              p.y + side.y * s + d.y * swing * s};
             ShapeAlgorithms::drawPoints(target, ShapeAlgorithms::filledCircle(foot, 1),
-                                        sf::Color(30, 30, 30), 1.0f);
+                                        Rgba(30, 30, 30), 1.0f);
         }
 
         // Shoulders: a midpoint ellipse wide across the walking direction.

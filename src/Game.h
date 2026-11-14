@@ -1,5 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "render/GLRenderer.h"
+#include "render/SoftwareRenderer.h"
 #include <string>
 #include "lines/LineRenderer.h"
 #include "city/RoadNetwork.h"
@@ -34,8 +36,8 @@ public:
     int run();
 
     // Headless evidence capture: simulate `seconds` at the fixed step,
-    // apply the toggle keys in `keys` (e.g. "GT") first, render one frame
-    // off-screen and save it as a PNG.
+    // apply the toggle keys in `keys` (e.g. "GT", "O" for the software
+    // renderer) first, render one frame off-screen and save it as a PNG.
     int renderScreenshot(const std::string& path, float seconds, const std::string& keys);
 
 private:
@@ -59,6 +61,11 @@ private:
     HelpPanel help_;
     ObjectiveBanner banner_;
 
+    // Both backends draw the same scene; O switches between them.
+    SoftwareRenderer software_;
+    GLRenderer gl_;
+    bool useOpenGL_{true};
+
     bool graphicsDebug_{false};
     bool clippingDebug_{false};
     bool curveDebug_{false};
@@ -70,8 +77,9 @@ private:
     bool handleKey(sf::Keyboard::Key key);
     void restart();
     void step(float deltaTime, const DrivingInput& input);
-    void render(sf::RenderTarget& target) const;
-    void drawNightLights(sf::RenderTarget& target) const;
+    IRenderer& renderer(sf::RenderTarget& target);
+    void render(IRenderer& target) const;
+    void drawNightLights(IRenderer& target) const;
     HudData hudData() const;
     BannerData bannerData() const;
     void saveScreenshot(const sf::RenderWindow& window);

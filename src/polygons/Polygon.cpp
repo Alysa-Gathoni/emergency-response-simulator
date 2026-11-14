@@ -53,9 +53,9 @@ Polygon Polygon::transformed(const Mat3& matrix) const {
     return Polygon(matrix.apply(vertices_));
 }
 
-void Polygon::drawOutline(sf::RenderTarget& target,
+void Polygon::drawOutline(IRenderer& target,
                           const LineRenderer& renderer,
-                          sf::Color color,
+                          Rgba color,
                           float pixelSize) const {
     if (vertices_.size() < 2) return;
 
@@ -66,7 +66,7 @@ void Polygon::drawOutline(sf::RenderTarget& target,
     }
 }
 
-void Polygon::drawVertices(sf::RenderTarget& target, sf::Color color) const {
+void Polygon::drawVertices(IRenderer& target, Rgba color) const {
     for (const Point& p : vertices_)
         Raster::marker(target, p, 4.0f, color);
 }

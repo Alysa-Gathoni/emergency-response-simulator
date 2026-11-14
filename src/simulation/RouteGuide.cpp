@@ -11,7 +11,7 @@ constexpr float DashLength = 14.0f;
 constexpr float DashGap = 10.0f;
 constexpr float FlowSpeed = 40.0f;      // px/s the dashes move towards the incident
 constexpr float ArrowDistance = 50.0f;  // from the ambulance centre
-const sf::Color Outline(15, 18, 24);    // dark edge so the route stands out
+const Rgba Outline(15, 18, 24);    // dark edge so the route stands out
                                         // from the painted road markings
 constexpr float MergeDistance = 2.0f;   // nodes closer than this are one node
 constexpr float StartGap = 36.0f;       // no dashes under the ambulance itself
@@ -120,8 +120,8 @@ void RouteGuide::update(float deltaTime, Point ambulance, Point incident, bool a
     route_ = plan(network_, ambulance, incident);
 }
 
-void RouteGuide::draw(sf::RenderTarget& target, const LineRenderer& lines,
-                      sf::Color colour, bool debug) const {
+void RouteGuide::draw(IRenderer& target, const LineRenderer& lines,
+                      Rgba colour, bool debug) const {
     if (!active_ || route_.size() < 2) return;
 
     // Dashes: walk the polyline by arc length; a point is "on" while

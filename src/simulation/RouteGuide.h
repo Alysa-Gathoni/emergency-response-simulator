@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <vector>
 #include "../city/RoadNetwork.h"
 #include "../lines/LineRenderer.h"
@@ -25,8 +25,8 @@ public:
     explicit RouteGuide(const RoadNetwork& network);
 
     void update(float deltaTime, Point ambulance, Point incident, bool active);
-    void draw(sf::RenderTarget& target, const LineRenderer& lines,
-              sf::Color colour, bool debug) const;
+    void draw(IRenderer& target, const LineRenderer& lines,
+              Rgba colour, bool debug) const;
 
     const std::vector<Point>& route() const { return route_; }
     float remaining() const { return length(route_); }

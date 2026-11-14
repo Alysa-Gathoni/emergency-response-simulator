@@ -24,7 +24,7 @@ SceneNode* SceneNode::find(const std::string& nodeName) {
     return nullptr;
 }
 
-void SceneNode::draw(sf::RenderTarget& target,
+void SceneNode::draw(IRenderer& target,
                      const LineRenderer& lines,
                      const Mat3& parentWorld,
                      bool debug) const {
@@ -54,7 +54,7 @@ void SceneNode::draw(sf::RenderTarget& target,
         const float r = wheelRadius;
         const float w = wheelWidth * 0.5f;
         const std::vector<Point> tyre = {{-r, -w}, {r, -w}, {r, w}, {-r, w}};
-        PolygonFill::draw(target, world.apply(tyre), lines, sf::Color(22, 22, 24), false);
+        PolygonFill::draw(target, world.apply(tyre), lines, Rgba(22, 22, 24), false);
 
         // Tread ridges sit on the rim at angles spin + k * 2pi / N. Seen
         // from above, a ridge at angle a is at x = r cos(a) along the tyre
@@ -65,7 +65,7 @@ void SceneNode::draw(sf::RenderTarget& target,
             if (std::sin(a) <= 0.0f) continue;
             const float x = r * std::cos(a);
             lines.draw(target, world.apply(Point{x, -w}), world.apply(Point{x, w}),
-                       sf::Color(90, 90, 96), 1.0f);
+                       Rgba(90, 90, 96), 1.0f);
         }
         break;
     }
@@ -77,8 +77,8 @@ void SceneNode::draw(sf::RenderTarget& target,
     if (debug && kind != Kind::Polygon) {
         // Local frame of this node: x axis red, y axis green.
         const Point o = world.apply(Point{0, 0});
-        lines.draw(target, o, world.apply(Point{10, 0}), sf::Color(235, 80, 80), 1.0f);
-        lines.draw(target, o, world.apply(Point{0, 10}), sf::Color(80, 220, 120), 1.0f);
+        lines.draw(target, o, world.apply(Point{10, 0}), Rgba(235, 80, 80), 1.0f);
+        lines.draw(target, o, world.apply(Point{0, 10}), Rgba(80, 220, 120), 1.0f);
     }
 }
 
@@ -90,7 +90,7 @@ std::unique_ptr<SceneNode> makeGroup(const std::string& name, const Mat3& local)
 
 std::unique_ptr<SceneNode> makeRect(const std::string& name,
                                     float left, float top, float right, float bottom,
-                                    sf::Color fill, sf::Color outline,
+                                    Rgba fill, Rgba outline,
                                     float outlineWidth) {
     auto node = std::make_unique<SceneNode>(name, SceneNode::Kind::Polygon);
     node->shape = {{left, top}, {right, top}, {right, bottom}, {left, bottom}};
@@ -101,7 +101,7 @@ std::unique_ptr<SceneNode> makeRect(const std::string& name,
 }
 
 std::unique_ptr<SceneNode> makeDisc(const std::string& name, Point centre,
-                                    int radius, sf::Color fill) {
+                                    int radius, Rgba fill) {
     auto node = std::make_unique<SceneNode>(name, SceneNode::Kind::Disc);
     node->local = Mat3::translation(centre.x, centre.y);
     node->radius = radius;

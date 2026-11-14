@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include "../core/Point.h"
 #include "../lines/LineRenderer.h"
 
@@ -27,7 +27,7 @@ public:
     // True when `p` is on the title bar (or the tab): clicking it toggles.
     bool headerContains(Point p) const;
 
-    void draw(sf::RenderTarget& target, const LineRenderer& lines) const;
+    void draw(IRenderer& target, const LineRenderer& lines) const;
 
 private:
     bool expanded_{true};

@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -28,8 +28,8 @@ struct SceneNode {
     Mat3 local{Mat3::identity()};
 
     std::vector<Point> shape;               // Polygon: local vertices
-    sf::Color fill{sf::Color::White};
-    sf::Color outline{sf::Color::Transparent};
+    Rgba fill{Rgba::White};
+    Rgba outline{Rgba::Transparent};
     float outlineWidth{0.0f};
     int radius{0};                          // Disc
     float wheelRadius{6.0f};                // Wheel
@@ -46,7 +46,7 @@ struct SceneNode {
     SceneNode* add(std::unique_ptr<SceneNode> child);
     SceneNode* find(const std::string& nodeName);
 
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const LineRenderer& lines,
               const Mat3& parentWorld,
               bool debug) const;
@@ -56,10 +56,10 @@ struct SceneNode {
 std::unique_ptr<SceneNode> makeGroup(const std::string& name, const Mat3& local);
 std::unique_ptr<SceneNode> makeRect(const std::string& name,
                                     float left, float top, float right, float bottom,
-                                    sf::Color fill,
-                                    sf::Color outline = sf::Color::Transparent,
+                                    Rgba fill,
+                                    Rgba outline = Rgba::Transparent,
                                     float outlineWidth = 0.0f);
 std::unique_ptr<SceneNode> makeDisc(const std::string& name, Point centre,
-                                    int radius, sf::Color fill);
+                                    int radius, Rgba fill);
 std::unique_ptr<SceneNode> makeWheel(const std::string& name,
                                      float radius, float width);

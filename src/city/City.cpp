@@ -12,9 +12,9 @@ std::vector<Point> rectPoints(const Rect& r) {
     return rectPoints(r.left, r.top, r.right, r.bottom);
 }
 
-const sf::Color Pavement(58, 64, 72);
-const sf::Color Grass(46, 84, 54);
-const sf::Color Zebra(225, 225, 225);
+const Rgba Pavement(58, 64, 72);
+const Rgba Grass(46, 84, 54);
+const Rgba Zebra(225, 225, 225);
 
 }
 
@@ -46,7 +46,7 @@ const std::vector<Polygon>& City::buildings() const { return buildings_; }
 const Polygon& City::hospital() const { return hospital_; }
 const std::vector<Rect>& City::parks() const { return parks_; }
 
-void City::drawRoads(sf::RenderTarget& target, const LineRenderer& lines) const {
+void City::drawRoads(IRenderer& target, const LineRenderer& lines) const {
     // Road surfaces are rectangles filled with our scan-line algorithm.
     for (const Road& road : network_.roads()) {
         const float lo = road.centre - RoadNetwork::HalfWidth;
@@ -58,7 +58,7 @@ void City::drawRoads(sf::RenderTarget& target, const LineRenderer& lines) const 
     }
 }
 
-void City::drawMarkings(sf::RenderTarget& target, const LineRenderer& lines) const {
+void City::drawMarkings(IRenderer& target, const LineRenderer& lines) const {
     const float quiet = RoadNetwork::StopLineDistance - RoadNetwork::HalfWidth;
 
     for (const Road& road : network_.roads()) {
@@ -103,7 +103,7 @@ void City::drawMarkings(sf::RenderTarget& target, const LineRenderer& lines) con
         lines.draw(target, stop.a, stop.b, Zebra, 3.0f);
 }
 
-void City::draw(sf::RenderTarget& target,
+void City::draw(IRenderer& target,
                 const LineRenderer& lines,
                 bool polygonDebug) const {
     for (const Rect& block : network_.blocks())
@@ -114,8 +114,8 @@ void City::draw(sf::RenderTarget& target,
     drawRoads(target, lines);
     drawMarkings(target, lines);
 
-    const sf::Color roofs[] = {
-        sf::Color(92, 104, 116), sf::Color(104, 96, 90), sf::Color(84, 98, 104)
+    const Rgba roofs[] = {
+        Rgba(92, 104, 116), Rgba(104, 96, 90), Rgba(84, 98, 104)
     };
     for (std::size_t i = 0; i < buildings_.size(); ++i) {
         const Polygon& building = buildings_[i];
@@ -129,14 +129,14 @@ void City::draw(sf::RenderTarget& target,
         const float w = v[1].x - v[0].x;
         const float h = v[2].y - v[1].y;
         parapet.scale((w - 14.0f) / w, (h - 14.0f) / h);
-        parapet.drawOutline(target, lines, sf::Color(130, 138, 146), 1.0f);
+        parapet.drawOutline(target, lines, Rgba(130, 138, 146), 1.0f);
 
         if (polygonDebug)
             building.drawVertices(target, Colors::Debug);
     }
 
     PolygonFill::draw(target, hospital_.vertices(), lines,
-                      sf::Color(105, 115, 125), polygonDebug);
+                      Rgba(105, 115, 125), polygonDebug);
     hospital_.drawOutline(target, lines, Colors::Hospital, 3.0f);
 
     // Red cross on the hospital roof.
