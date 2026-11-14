@@ -62,7 +62,7 @@ void CollisionSystem::update(Ambulance& ambulance,
     }
 
     // The map edge stops the ambulance but is not counted as a crash.
-    const AABB world{0, 0, 1100, 720};
+    const AABB world{0, 0, city.network().width(), city.network().height()};
     const Point fix = Collision::keepInside(ambulanceBox_, world);
     if (fix.x != 0.0f || fix.y != 0.0f) ambulance.resolveCollision(fix);
 

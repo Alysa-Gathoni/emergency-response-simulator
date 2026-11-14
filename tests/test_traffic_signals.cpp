@@ -47,9 +47,9 @@ void longFrameSkipsWholePhases() {
 }
 
 void stopLinesSitOnTheLeftLane() {
-    RoadNetwork net;
-    CHECK(net.intersections().size() == 4);
-    CHECK(net.stopLines().size() == 16);
+    RoadNetwork net;                       // the district: 4 x 3 junctions
+    CHECK(net.intersections().size() == 12);
+    CHECK(net.stopLines().size() == 48);
 
     for (const StopLine& s : net.stopLines()) {
         const Point c = net.intersections()[s.intersection].centre;

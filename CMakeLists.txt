@@ -29,6 +29,7 @@ add_executable(EmergencyResponseSimulator
     src/city/Environment.cpp
     src/city/Pedestrians.cpp
     src/city/RedLightCamera.cpp
+    src/city/RoadGraph.cpp
     src/city/RoadNetwork.cpp
     src/city/SignalController.cpp
     src/city/TrafficLight.cpp
@@ -230,3 +231,23 @@ add_executable(test_camera
 )
 target_include_directories(test_camera PRIVATE src)
 add_test(NAME camera COMMAND test_camera)
+
+add_executable(test_road_graph
+    tests/test_road_graph.cpp
+    src/city/City.cpp
+    src/city/RoadGraph.cpp
+    src/city/RoadNetwork.cpp
+    src/curves/Bezier.cpp
+    src/curves/CatmullRom.cpp
+    src/curves/Spline.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_road_graph PRIVATE src)
+add_test(NAME road_graph COMMAND test_road_graph)

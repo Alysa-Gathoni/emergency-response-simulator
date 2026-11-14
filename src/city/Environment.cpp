@@ -1,13 +1,22 @@
 #include "Environment.h"
 #include "../shapes/CircleEllipse.h"
 
-void Environment::draw(IRenderer& target, bool debug) const {
-    // Trees stand in the two parks of the district.
-    const Point treePositions[] = {
-        {60,642}, {124,670}, {190,646}, {1014,50}, {1058,84}
-    };
+Environment::Environment(const std::vector<Rect>& parks) {
+    int k = 0;
+    for (const Rect& park : parks) {
+        for (float y = park.top + 34.0f; y <= park.bottom - 34.0f; y += 64.0f) {
+            for (float x = park.left + 26.0f; x <= park.right - 26.0f; x += 64.0f) {
+                const float jx = static_cast<float>((k * 37) % 17) - 8.0f;
+                const float jy = static_cast<float>((k * 53) % 13) - 6.0f;
+                trees_.push_back({x + jx, y + jy});
+                ++k;
+            }
+        }
+    }
+}
 
-    for (Point p : treePositions) {
+void Environment::draw(IRenderer& target, bool debug) const {
+    for (Point p : trees_) {
         // Canopy: filled midpoint ellipse with a darker outline.
         ShapeAlgorithms::drawPoints(
             target,

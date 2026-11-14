@@ -25,7 +25,7 @@ DrivingInput readDrivingKeys() {
 }
 
 Game::Game() {
-    camera_.setWorld(RoadNetwork::WorldWidth, RoadNetwork::WorldHeight);
+    camera_.setWorld(network_.width(), network_.height());
     camera_.snapTo(startPosition_);
 }
 

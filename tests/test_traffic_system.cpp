@@ -29,6 +29,8 @@ bool overlap(const std::vector<Point>& a, const std::vector<Point>& b) {
     return true;
 }
 
+RoadNetwork small() { return RoadNetwork({300, 800}, {200, 520}, 1100, 720); }
+
 void densityScalesWithTheGrid() {
     CHECK(TrafficSystem::vehicleCountFor(TrafficDensity::Medium, 4) == 14);
     CHECK(TrafficSystem::vehicleCountFor(TrafficDensity::Low, 4) == 10);
@@ -68,8 +70,8 @@ void signalOffsetsFollowTheGrid() {
 }
 
 // Long run: no two vehicles may ever overlap, and nobody is stuck for ages.
-void soakWithoutOverlaps(TrafficDensity density, unsigned seed, float seconds) {
-    RoadNetwork network;
+void soakWithoutOverlaps(const RoadNetwork& network, TrafficDensity density,
+                         unsigned seed, float seconds) {
     TrafficLights lights(network);
     TrafficSystem traffic(network, density, seed);
     const float dt = 1.0f / 60.0f;
@@ -101,7 +103,10 @@ int main() {
     densityScalesWithTheGrid();
     routesComeFromTheGrid();
     signalOffsetsFollowTheGrid();
-    soakWithoutOverlaps(TrafficDensity::Medium, 7, 240.0f);
-    soakWithoutOverlaps(TrafficDensity::High, 3, 180.0f);
+    const RoadNetwork grid2x2 = small();
+    soakWithoutOverlaps(grid2x2, TrafficDensity::Medium, 7, 240.0f);
+    soakWithoutOverlaps(grid2x2, TrafficDensity::High, 3, 180.0f);
+    const RoadNetwork district;
+    soakWithoutOverlaps(district, TrafficDensity::Medium, 5, 60.0f);
     return check::failures();
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <utility>
 #include <vector>
 #include "Direction.h"
@@ -14,8 +15,9 @@ struct Rect {
 
 // A straight two-lane road crossing the whole map.
 struct Road {
-    bool vertical;   // vertical roads run north-south
-    float centre;    // x of a vertical road, y of a horizontal road
+    bool vertical;      // vertical roads run north-south
+    float centre;       // x of a vertical road, y of a horizontal road
+    std::string name;   // shown in the debug view and on the minimap
 };
 
 struct Intersection {
@@ -40,20 +42,27 @@ struct Crosswalk {
     SignalGroup trafficGroup; // vehicles that drive over this crossing
 };
 
-// Road layout of the district: a 2x2 grid of signalised intersections.
+// Road layout of the district: a grid of signalised intersections.
 // Every other module (city drawing, traffic lights, traffic routes,
 // pedestrians) derives its geometry from here, so the map is defined once.
 class RoadNetwork {
 public:
-    static constexpr float WorldWidth = 1100.0f;
-    static constexpr float WorldHeight = 720.0f;
     static constexpr float HalfWidth = 70.0f;        // road centre to kerb (140 px roads)
     static constexpr float LaneOffset = 35.0f;       // road centre to lane centre
     static constexpr float CrosswalkInner = 72.0f;   // distances from the
     static constexpr float CrosswalkOuter = 88.0f;   // intersection centre
     static constexpr float StopLineDistance = 94.0f;
 
+    // The Nairobi-inspired district: 4 avenues x 3 streets = 12 junctions
+    // on a 2260 x 1500 map, with uneven spacing so blocks differ in size.
     RoadNetwork();
+
+    // Any grid: x of the vertical roads, y of the horizontal roads, map size.
+    RoadNetwork(std::vector<float> columns, std::vector<float> rows,
+                float width, float height);
+
+    float width() const;
+    float height() const;
 
     const std::vector<Road>& roads() const;
     const std::vector<Intersection>& intersections() const;
@@ -88,6 +97,8 @@ public:
     static SplinePath buildRoute(const std::vector<Point>& waypoints);
 
 private:
+    float width_;
+    float height_;
     std::vector<Road> roads_;
     std::vector<Intersection> intersections_;
     std::vector<StopLine> stopLines_;
