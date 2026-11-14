@@ -38,6 +38,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/ClippingDemo.cpp
     src/simulation/Collision.cpp
     src/simulation/CollisionSystem.cpp
+    src/simulation/DemoDriver.cpp
     src/simulation/EmergencyMarker.cpp
     src/simulation/Mission.cpp
     src/simulation/Pathfinding.cpp
@@ -292,3 +293,43 @@ add_executable(test_mission
 )
 target_include_directories(test_mission PRIVATE src)
 add_test(NAME mission COMMAND test_mission)
+
+# Whole loop without a window: call -> route -> drive -> treat -> hospital.
+add_executable(test_full_call
+    tests/test_full_call.cpp
+    src/city/City.cpp
+    src/city/Pedestrians.cpp
+    src/city/RoadGraph.cpp
+    src/city/RoadNetwork.cpp
+    src/city/SignalController.cpp
+    src/city/TrafficLight.cpp
+    src/core/Mat3.cpp
+    src/curves/Bezier.cpp
+    src/curves/CatmullRom.cpp
+    src/curves/Spline.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/polygons/Triangulation.cpp
+    src/rasterization/Clipping.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+    src/simulation/Ambulance.cpp
+    src/simulation/Collision.cpp
+    src/simulation/CollisionSystem.cpp
+    src/simulation/DemoDriver.cpp
+    src/simulation/EmergencyMarker.cpp
+    src/simulation/Mission.cpp
+    src/simulation/Pathfinding.cpp
+    src/simulation/RouteGuide.cpp
+    src/simulation/SceneNode.cpp
+    src/simulation/TrafficRules.cpp
+    src/simulation/TrafficSystem.cpp
+    src/simulation/TrafficVehicle.cpp
+    src/simulation/VehicleModels.cpp
+    src/simulation/VehicleType.cpp
+    src/ui/PixelFont.cpp
+)
+target_include_directories(test_full_call PRIVATE src)
+add_test(NAME full_call COMMAND test_full_call)

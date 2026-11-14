@@ -8,6 +8,8 @@
 //   EmergencyResponseSimulator --screenshot <file.png> [seconds] [keys]
 //       headless capture for the checkpoint evidence, e.g.
 //       --screenshot night.png 20 T   (simulate 20 s at night, save a PNG)
+//       --screenshot call.png 25 !    (the demo driver follows the route)
+//       --screenshot menu.png 3 @     (title menu)
 int main(int argc, char** argv) {
     Game game;
 
