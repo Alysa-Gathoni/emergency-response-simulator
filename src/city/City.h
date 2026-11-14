@@ -16,6 +16,11 @@ public:
     const std::vector<Polygon>& buildings() const;
     const Polygon& hospital() const;
     const std::vector<Rect>& parks() const;
+    const RoadNetwork& network() const;
+
+    // Where the ambulance waits: the kerbside lane in front of the hospital,
+    // facing east.
+    Point hospitalEntrance() const;
 
 private:
     const RoadNetwork& network_;

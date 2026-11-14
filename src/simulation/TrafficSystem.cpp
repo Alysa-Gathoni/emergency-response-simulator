@@ -53,7 +53,7 @@ void TrafficSystem::placeStages() {
     stages_.clear();
     int k = 0;
     for (const Road& road : network_.roads()) {
-        const float extent = road.vertical ? RoadNetwork::WorldHeight : RoadNetwork::WorldWidth;
+        const float extent = road.vertical ? network_.height() : network_.width();
         for (const auto& [a, b] : network_.freeIntervals(road)) {
             if (a <= 0.0f || b >= extent || b - a < 160.0f) continue;   // map edge sections
             const float mid = (a + b) * 0.5f;
@@ -74,8 +74,8 @@ void TrafficSystem::buildRoutes() {
     const int nx = static_cast<int>(xs.size());
     const int ny = static_cast<int>(ys.size());
     const float off = 60.0f;
-    const float right = RoadNetwork::WorldWidth + off;
-    const float bottom = RoadNetwork::WorldHeight + off;
+    const float right = network_.width() + off;
+    const float bottom = network_.height() + off;
     auto node = [&](int i, int j) { return Point{xs[i], ys[j]}; };
 
     std::vector<std::vector<Point>> plans;
@@ -145,8 +145,8 @@ void TrafficSystem::spawn(int count, unsigned seed) {
         const auto& route = routes_[pickRoute(rng)];
         const float distance = unit(rng) * route->path.length();
         const Point p = route->path.pointAtDistance(distance);
-        const bool onMap = p.x > 0 && p.x < RoadNetwork::WorldWidth &&
-                           p.y > 0 && p.y < RoadNetwork::WorldHeight;
+        const bool onMap = p.x > 0 && p.x < network_.width() &&
+                           p.y > 0 && p.y < network_.height();
         if (!onMap || !clear(p)) continue;
 
         const VehicleType type = pickVehicleType(unit(rng));

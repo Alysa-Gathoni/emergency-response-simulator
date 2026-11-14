@@ -1,4 +1,7 @@
 #include "City.h"
+#include <algorithm>
+#include <cmath>
+#include <random>
 #include "../core/Color.h"
 #include "../rasterization/PolygonFill.h"
 
@@ -19,27 +22,86 @@ const Rgba Zebra(225, 225, 225);
 }
 
 City::City(const RoadNetwork& network) : network_(network) {
-    // Buildings sit inside the blocks left between the roads, set back
-    // from the kerb by a 14 px pavement.
-    const float rects[][4] = {
-        {14, 14, 105, 116},   {119, 14, 216, 116},
-        {384, 14, 490, 116},  {504, 14, 600, 90},   {614, 14, 716, 116},
-        {884, 14, 975, 116},
-        {14, 284, 216, 350},  {14, 364, 108, 436},  {122, 364, 216, 436},
-        {634, 284, 716, 436},
-        {884, 284, 1086, 354}, {884, 368, 1086, 436},
-        {384, 604, 540, 706},  {554, 604, 716, 706},
-        {884, 604, 975, 706},  {989, 604, 1086, 706},
-    };
-    for (const auto& r : rects)
-        buildings_.emplace_back(rectPoints(r[0], r[1], r[2], r[3]));
+    // The layout is generated from the road grid, so a new map needs no
+    // hand-placed coordinates. Every block (land between roads) gets a 14 px
+    // pavement; inside it:
+    //   - the block south-east of the first junction holds the hospital,
+    //   - three blocks are parks,
+    //   - every other block is split into a grid of building lots whose
+    //     size follows the block (about 150 x 140 px each), with the split
+    //     lines jittered by a fixed-seed random generator so streets do not
+    //     look stamped out.
+    const auto xs = network.columns();
+    const auto ys = network.rows();
+    const float edge = RoadNetwork::HalfWidth;
+    const float pavement = 14.0f;
+    std::mt19937 rng(11);
+    std::uniform_real_distribution<float> jitter(-0.18f, 0.18f);
 
-    hospital_ = Polygon(rectPoints(384, 284, 620, 436));
-
-    parks_ = {
-        {14, 604, 216, 706},
-        {989, 14, 1086, 116},
+    auto blockAt = [&](float x, float y) {
+        for (const Rect& b : network.blocks())
+            if (x > b.left && x < b.right && y > b.top && y < b.bottom) return b;
+        return Rect{0, 0, 0, 0};
     };
+    const Rect hospitalBlock = blockAt(xs[0] + edge + 5, ys[0] + edge + 5);
+    const Rect parkBlocks[] = {
+        blockAt(xs.back() + edge + 5, ys[0] - edge - 5),                      // north-east corner
+        blockAt(xs[0] - edge - 5, ys.back() + edge + 5),                      // south-west corner
+        blockAt(xs[xs.size() / 2] + edge + 5, ys[ys.size() / 2] + edge + 5),  // "central park"
+    };
+    auto same = [](const Rect& a, const Rect& b) {
+        return a.left == b.left && a.top == b.top && a.right == b.right && a.bottom == b.bottom;
+    };
+
+    for (const Rect& block : network.blocks()) {
+        const Rect inner{block.left + pavement, block.top + pavement,
+                         block.right - pavement, block.bottom - pavement};
+        const float w = inner.right - inner.left;
+        const float h = inner.bottom - inner.top;
+        if (w < 40.0f || h < 40.0f) continue;
+
+        if (same(block, hospitalBlock)) {
+            // Hospital fills the block except a strip for one more building.
+            const float split = inner.left + w * 0.68f;
+            hospital_ = Polygon(rectPoints(inner.left, inner.top, split, inner.bottom));
+            buildings_.emplace_back(rectPoints(split + pavement, inner.top, inner.right, inner.bottom));
+            continue;
+        }
+        bool park = false;
+        for (const Rect& p : parkBlocks) park = park || same(block, p);
+        if (park) {
+            parks_.push_back(inner);
+            continue;
+        }
+
+        const int cols = std::clamp(static_cast<int>(std::lround(w / 150.0f)), 1, 4);
+        const int rowsHere = std::clamp(static_cast<int>(std::lround(h / 140.0f)), 1, 3);
+        std::vector<float> cx = {inner.left}, cy = {inner.top};
+        for (int c = 1; c < cols; ++c) cx.push_back(inner.left + w * (c + jitter(rng) * 0.5f) / cols);
+        for (int r = 1; r < rowsHere; ++r) cy.push_back(inner.top + h * (r + jitter(rng) * 0.5f) / rowsHere);
+        cx.push_back(inner.right);
+        cy.push_back(inner.bottom);
+
+        for (int c = 0; c < cols; ++c) {
+            for (int r = 0; r < rowsHere; ++r) {
+                const float l = cx[c] + (c > 0 ? pavement * 0.5f : 0.0f);
+                const float t = cy[r] + (r > 0 ? pavement * 0.5f : 0.0f);
+                const float rr = cx[c + 1] - (c + 1 < cols ? pavement * 0.5f : 0.0f);
+                const float b = cy[r + 1] - (r + 1 < rowsHere ? pavement * 0.5f : 0.0f);
+                if (rr - l > 30.0f && b - t > 30.0f)
+                    buildings_.emplace_back(rectPoints(l, t, rr, b));
+            }
+        }
+    }
+}
+
+const RoadNetwork& City::network() const { return network_; }
+
+Point City::hospitalEntrance() const {
+    // Street north of the hospital, eastbound lane (left-hand traffic).
+    const Point c = hospital_.centroid();
+    const float street = network_.rows().front();
+    return {c.x, street - RoadNetwork::LaneOffset};
 }
 
 const std::vector<Polygon>& City::buildings() const { return buildings_; }
@@ -52,8 +114,8 @@ void City::drawRoads(IRenderer& target, const LineRenderer& lines) const {
         const float lo = road.centre - RoadNetwork::HalfWidth;
         const float hi = road.centre + RoadNetwork::HalfWidth;
         const auto surface = road.vertical
-            ? rectPoints(lo, 0, hi, RoadNetwork::WorldHeight)
-            : rectPoints(0, lo, RoadNetwork::WorldWidth, hi);
+            ? rectPoints(lo, 0, hi, network_.height())
+            : rectPoints(0, lo, network_.width(), hi);
         PolygonFill::draw(target, surface, lines, Colors::Road, false);
     }
 }
@@ -74,8 +136,8 @@ void City::drawMarkings(IRenderer& target, const LineRenderer& lines) const {
 
             // Dashed centre line, kept clear of crossings and stop lines.
             const float start = from > 0.0f ? from + quiet : from;
-            const float end = to < (road.vertical ? RoadNetwork::WorldHeight
-                                                  : RoadNetwork::WorldWidth)
+            const float end = to < (road.vertical ? network_.height()
+                                                  : network_.width())
                 ? to - quiet : to;
             for (float s = start; s + 24.0f <= end; s += 48.0f)
                 lines.draw(target, at(s, 0.0f), at(s + 24.0f, 0.0f), Colors::RoadLine);

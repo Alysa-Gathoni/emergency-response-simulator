@@ -3,11 +3,13 @@
 #include "../core/Color.h"
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace {
 
 constexpr float PI = 3.14159265358979323846f;
-constexpr float MinSpawnDistance = 260.0f;   // never right next to the ambulance
+constexpr float MinSpawnDistance = 400.0f;   // never right next to the ambulance
+constexpr float MaxSpawnDistance = 1500.0f;  // and reachable within the time limit
 constexpr float ResultPause = 2.5f;
 
 struct IncidentInfo {
@@ -26,16 +28,9 @@ IncidentInfo infoFor(IncidentType type) {
 
 }
 
-Mission::Mission(unsigned seed)
-    : rng_(seed), marker_({0.0f, 0.0f}) {
-    // Incidents happen on the roads between junctions, in either lane,
-    // so the ambulance can always stop right at the scene.
-    spawnPoints_ = {
-        {120, 175}, {560, 225}, {980, 175}, {120, 545},
-        {560, 495}, {980, 545}, {275, 360}, {325, 80},
-        {775, 640}, {825, 360}, {275, 650}, {825, 70},
-    };
-    nextIncident({420.0f, 175.0f});
+Mission::Mission(std::vector<Point> spawnPoints, Point start, unsigned seed)
+    : spawnPoints_(std::move(spawnPoints)), rng_(seed), marker_({0.0f, 0.0f}) {
+    nextIncident(start);
 }
 
 void Mission::nextIncident(Point ambulancePosition) {
@@ -47,7 +42,7 @@ void Mission::nextIncident(Point ambulancePosition) {
     for (int tries = 0; tries < 50; ++tries) {
         const Point p = spawnPoints_[candidate];
         const float d = std::hypot(p.x - ambulancePosition.x, p.y - ambulancePosition.y);
-        if (candidate != currentSpawn_ && d >= MinSpawnDistance) break;
+        if (candidate != currentSpawn_ && d >= MinSpawnDistance && d <= MaxSpawnDistance) break;
         candidate = pick(rng_);
     }
 

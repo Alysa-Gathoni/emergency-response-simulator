@@ -6,6 +6,7 @@
 #include "core/Camera2D.h"
 #include "lines/LineRenderer.h"
 #include "city/RoadNetwork.h"
+#include "city/RoadGraph.h"
 #include "city/City.h"
 #include "city/TrafficLight.h"
 #include "city/RedLightCamera.h"
@@ -48,19 +49,19 @@ public:
     int renderScreenshot(const std::string& path, float seconds, const std::string& keys);
 
 private:
-    const Point startPosition_{420.0f, 175.0f};   // outside the hospital
-
     LineRenderer lines_{LineMode::Bresenham};
     RoadNetwork network_;
+    RoadGraph graph_{network_};
     City city_{network_};
-    Environment environment_;
+    const Point startPosition_ = city_.hospitalEntrance();
+    Environment environment_{city_.parks()};
     Pedestrians pedestrians_{network_};
     DayNight dayNight_;
     TrafficLights trafficLights_{network_};
     Ambulance ambulance_{startPosition_};
     ClippingDemo clippingDemo_;
     Camera2D camera_{Screens::Width, Screens::Height};
-    Mission mission_;
+    Mission mission_{graph_.incidentSpots(), startPosition_};
     RouteGuide routeGuide_{network_};
     TrafficSystem traffic_{network_};
     RedLightCamera redLightCamera_{network_, trafficLights_};

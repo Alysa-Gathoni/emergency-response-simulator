@@ -24,7 +24,9 @@ public:
     static constexpr float StopSpeed = 15.0f;
     static constexpr float HoldTime = 1.0f;
 
-    explicit Mission(unsigned seed = 3);
+    // `spawnPoints` are lane positions where incidents can happen (from the
+    // road graph); `start` is where the ambulance begins.
+    Mission(std::vector<Point> spawnPoints, Point start, unsigned seed = 3);
 
     void update(float deltaTime, Point ambulancePosition, float ambulanceSpeed);
     void draw(IRenderer& target, const LineRenderer& lines, bool debug) const;

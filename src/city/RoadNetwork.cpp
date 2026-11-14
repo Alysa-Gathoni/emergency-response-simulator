@@ -28,11 +28,22 @@ BezierSegment straight(Point a, Point b) {
 
 }
 
-RoadNetwork::RoadNetwork() {
-    roads_ = {
-        {true, 300.0f}, {true, 800.0f},     // vertical avenues
-        {false, 200.0f}, {false, 520.0f}    // horizontal streets
-    };
+RoadNetwork::RoadNetwork()
+    : RoadNetwork({300.0f, 820.0f, 1420.0f, 1960.0f}, {220.0f, 740.0f, 1280.0f},
+                  2260.0f, 1500.0f) {
+    // Nairobi-inspired names (fictional layout).
+    const char* avenues[] = {"TOM MBOYA STREET", "MOI AVENUE", "UHURU HIGHWAY", "WAIYAKI WAY"};
+    const char* streets[] = {"KENYATTA AVENUE", "HAILE SELASSIE AVENUE", "NGONG ROAD"};
+    int a = 0, b = 0;
+    for (Road& road : roads_)
+        road.name = road.vertical ? avenues[a++ % 4] : streets[b++ % 3];
+}
+
+RoadNetwork::RoadNetwork(std::vector<float> columns, std::vector<float> rows,
+                         float width, float height)
+    : width_(width), height_(height) {
+    for (float x : columns) roads_.push_back({true, x, ""});
+    for (float y : rows) roads_.push_back({false, y, ""});
 
     // Intersections in reading order: top-left, top-right,
     // bottom-left, bottom-right.
@@ -79,6 +90,9 @@ const std::vector<Intersection>& RoadNetwork::intersections() const { return int
 const std::vector<StopLine>& RoadNetwork::stopLines() const { return stopLines_; }
 const std::vector<Crosswalk>& RoadNetwork::crosswalks() const { return crosswalks_; }
 
+float RoadNetwork::width() const { return width_; }
+float RoadNetwork::height() const { return height_; }
+
 std::vector<float> RoadNetwork::columns() const {
     std::vector<float> xs;
     for (const Road& r : roads_) if (r.vertical) xs.push_back(r.centre);
@@ -121,8 +135,8 @@ std::vector<Rect> RoadNetwork::blocks() const {
         cuts.push_back(r.centre - HalfWidth);
         cuts.push_back(r.centre + HalfWidth);
     }
-    xs.push_back(WorldWidth);
-    ys.push_back(WorldHeight);
+    xs.push_back(width_);
+    ys.push_back(height_);
     std::sort(xs.begin(), xs.end());
     std::sort(ys.begin(), ys.end());
 
@@ -141,7 +155,7 @@ RoadNetwork::freeIntervals(const Road& road) const {
             crossings.push_back(other.centre);
     std::sort(crossings.begin(), crossings.end());
 
-    const float length = road.vertical ? WorldHeight : WorldWidth;
+    const float length = road.vertical ? height_ : width_;
     std::vector<std::pair<float, float>> result;
     float start = 0.0f;
     for (float c : crossings) {
