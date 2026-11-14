@@ -46,6 +46,9 @@ struct SceneNode {
     SceneNode* add(std::unique_ptr<SceneNode> child);
     SceneNode* find(const std::string& nodeName);
 
+    // With an OpenGL renderer each node pushes its local matrix on the
+    // renderer's transform stack; otherwise the world matrix is built on
+    // the CPU. Either way world(child) = world(parent) * local(child).
     void draw(IRenderer& target,
               const LineRenderer& lines,
               const Mat3& parentWorld,

@@ -141,12 +141,21 @@ void drawMotorcycle(const Painter& p, const VehiclePose& pose) {
 namespace VehicleModels {
 
 void draw(IRenderer& target, const LineRenderer& lines, const VehiclePose& pose) {
-    const Painter painter{target, lines, pose.world};
+    // OpenGL: one glLoadMatrix-style push of T(position) * R(heading) and
+    // the model is rasterised in local space. Software: every vertex goes
+    // through the same matrix on the CPU before the scan-line fill.
+    const bool hardware = target.hardwareTransforms();
+    const Mat3 identity = Mat3::identity();
+    if (hardware) target.pushTransform(pose.world);
+
+    const Painter painter{target, lines, hardware ? identity : pose.world};
     switch (pose.type) {
         case VehicleType::Car:        drawCar(painter, pose); break;
         case VehicleType::Matatu:     drawMatatu(painter, pose); break;
         case VehicleType::Motorcycle: drawMotorcycle(painter, pose); break;
     }
+
+    if (hardware) target.popTransform();
 }
 
 }
