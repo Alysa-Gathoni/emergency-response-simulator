@@ -16,6 +16,7 @@
 #include "simulation/Mission.h"
 #include "simulation/RouteGuide.h"
 #include "simulation/TrafficSystem.h"
+#include "ui/Hud.h"
 
 int main() {
     sf::RenderWindow window(
@@ -41,6 +42,7 @@ int main() {
     TrafficSystem traffic(network);
     RedLightCamera redLightCamera(network, trafficLights);
     CollisionSystem collisions;
+    Hud hud;
 
     bool graphicsDebug = false;
     bool clippingDebug = false;
@@ -149,6 +151,21 @@ int main() {
         dayNight.drawLights(window, lineRenderer, lights, graphicsDebug);
 
         clippingDemo.draw(window, lineRenderer, clippingDebug);
+
+        HudData hudData;
+        hudData.incidentType = static_cast<int>(mission.type());
+        hudData.timeLeft = mission.timeLimit() - mission.elapsed();
+        hudData.timeLimit = mission.timeLimit();
+        hudData.distance = mission.distanceRemaining();
+        hudData.speed = ambulance.speed();
+        hudData.collisions = collisions.collisions();
+        hudData.redLights = redLightCamera.violations();
+        hudData.completed = mission.completed();
+        hudData.missed = mission.missed();
+        hudData.arrived = mission.state() == Mission::State::Arrived;
+        hudData.late = mission.state() == Mission::State::Missed;
+        hudData.bresenham = lineRenderer.getMode() == LineMode::Bresenham;
+        hud.draw(window, lineRenderer, hudData);
 
         window.display();
     }
