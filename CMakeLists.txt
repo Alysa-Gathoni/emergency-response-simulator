@@ -31,6 +31,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/CollisionSystem.cpp
     src/simulation/EmergencyMarker.cpp
     src/simulation/Mission.cpp
+    src/simulation/RouteGuide.cpp
     src/simulation/SceneNode.cpp
     src/simulation/TrafficRules.cpp
     src/simulation/TrafficVehicle.cpp
@@ -100,3 +101,22 @@ add_executable(test_collision
 )
 target_include_directories(test_collision PRIVATE src)
 add_test(NAME collision COMMAND test_collision)
+
+add_executable(test_route
+    tests/test_route.cpp
+    src/simulation/RouteGuide.cpp
+    src/city/RoadNetwork.cpp
+    src/curves/Bezier.cpp
+    src/curves/CatmullRom.cpp
+    src/curves/Spline.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_route PRIVATE src)
+target_link_libraries(test_route sfml-graphics sfml-window sfml-system)
+add_test(NAME route COMMAND test_route)

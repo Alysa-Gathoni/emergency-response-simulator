@@ -129,6 +129,7 @@ void Mission::draw(sf::RenderTarget& target, const LineRenderer&, bool debug) co
 
 Mission::State Mission::state() const { return state_; }
 IncidentType Mission::type() const { return type_; }
+sf::Color Mission::colour() const { return infoFor(type_).colour; }
 Point Mission::incidentPosition() const { return marker_.position(); }
 float Mission::elapsed() const { return elapsed_; }
 float Mission::timeLimit() const { return infoFor(type_).timeLimit; }

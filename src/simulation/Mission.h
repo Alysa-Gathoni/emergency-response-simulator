@@ -34,6 +34,7 @@ public:
 
     State state() const;
     IncidentType type() const;
+    sf::Color colour() const;         // marker colour of the current incident
     Point incidentPosition() const;
     float elapsed() const;            // seconds since the call came in
     float timeLimit() const;
