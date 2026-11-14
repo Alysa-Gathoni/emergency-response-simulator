@@ -79,6 +79,40 @@ const std::vector<Intersection>& RoadNetwork::intersections() const { return int
 const std::vector<StopLine>& RoadNetwork::stopLines() const { return stopLines_; }
 const std::vector<Crosswalk>& RoadNetwork::crosswalks() const { return crosswalks_; }
 
+std::vector<float> RoadNetwork::columns() const {
+    std::vector<float> xs;
+    for (const Road& r : roads_) if (r.vertical) xs.push_back(r.centre);
+    std::sort(xs.begin(), xs.end());
+    return xs;
+}
+
+std::vector<float> RoadNetwork::rows() const {
+    std::vector<float> ys;
+    for (const Road& r : roads_) if (!r.vertical) ys.push_back(r.centre);
+    std::sort(ys.begin(), ys.end());
+    return ys;
+}
+
+int RoadNetwork::columnOf(int intersection) const {
+    const auto xs = columns();
+    const float x = intersections_[static_cast<std::size_t>(intersection)].centre.x;
+    return static_cast<int>(std::lower_bound(xs.begin(), xs.end(), x - 0.5f) - xs.begin());
+}
+
+int RoadNetwork::rowOf(int intersection) const {
+    const auto ys = rows();
+    const float y = intersections_[static_cast<std::size_t>(intersection)].centre.y;
+    return static_cast<int>(std::lower_bound(ys.begin(), ys.end(), y - 0.5f) - ys.begin());
+}
+
+int RoadNetwork::junctionAt(Point p) const {
+    for (int i = 0; i < static_cast<int>(intersections_.size()); ++i) {
+        const Point c = intersections_[static_cast<std::size_t>(i)].centre;
+        if (std::abs(p.x - c.x) <= HalfWidth && std::abs(p.y - c.y) <= HalfWidth) return i;
+    }
+    return -1;
+}
+
 std::vector<Rect> RoadNetwork::blocks() const {
     std::vector<float> xs = {0.0f};
     std::vector<float> ys = {0.0f};

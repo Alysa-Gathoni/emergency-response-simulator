@@ -26,37 +26,97 @@ float segmentHit(Point p, Point p2, Point a, Point b) {
 }
 
 TrafficSystem::TrafficSystem(const RoadNetwork& network,
-                             int vehicleCount, unsigned seed)
-    : network_(network), vehicleCount_(vehicleCount), seed_(seed) {
-    // Matatu stages sit in the kerbside lane between junctions. In
-    // left-hand traffic the kerb lane is the only lane per direction.
-    stages_ = {
-        {560, 165},   // top street, eastbound
-        {640, 235},   // top street, westbound
-        {470, 555},   // bottom street, westbound
-        {835, 380},   // east avenue, southbound
-    };
+                             TrafficDensity density, unsigned seed)
+    : network_(network), density_(density), seed_(seed) {
+    placeStages();
+    buildRoutes();
+    spawn(vehicleCountFor(density_, static_cast<int>(network_.intersections().size())), seed_);
+}
 
-    // Waypoints: intersection centres and road ends just off the map.
-    const Point A{300, 200}, B{800, 200}, C{300, 520}, D{800, 520};
-    const Point north300{300, -60}, north800{800, -60}, south800{800, 780};
-    const Point west200{-60, 200}, east200{1160, 200};
-    const Point west520{-60, 520}, east520{1160, 520};
+int TrafficSystem::vehicleCountFor(TrafficDensity density, int intersections) {
+    const float perJunction = density == TrafficDensity::Low    ? 2.5f
+                            : density == TrafficDensity::Medium ? 3.5f : 5.0f;
+    return std::max(4, static_cast<int>(std::lround(perJunction * intersections)));
+}
 
-    const auto outerLefts  = makeRoute({C, D, B, A});
-    const auto outerRights = makeRoute({A, B, D, C});
-    const auto top         = makeRoute({west200, A, B, east200});
-    const auto eastAvenue  = makeRoute({north800, B, D, south800});
-    const auto westLoop    = makeRoute({north300, A, C, D, east520, D, C, A});
-    const auto bottomLoop  = makeRoute({west520, C, D, B, east200, B, D, C});
-    routes_ = {outerLefts, outerRights, top, eastAvenue, westLoop, bottomLoop};
+void TrafficSystem::setDensity(TrafficDensity density) {
+    density_ = density;
+    reset();
+}
 
-    spawn(vehicleCount_, seed_);
+TrafficDensity TrafficSystem::density() const { return density_; }
+int TrafficSystem::routeCount() const { return static_cast<int>(routes_.size()); }
+
+void TrafficSystem::placeStages() {
+    // A matatu stage in the middle of every road section between two
+    // junctions, alternating the direction (lane) it serves.
+    stages_.clear();
+    int k = 0;
+    for (const Road& road : network_.roads()) {
+        const float extent = road.vertical ? RoadNetwork::WorldHeight : RoadNetwork::WorldWidth;
+        for (const auto& [a, b] : network_.freeIntervals(road)) {
+            if (a <= 0.0f || b >= extent || b - a < 160.0f) continue;   // map edge sections
+            const float mid = (a + b) * 0.5f;
+            const Point centre = road.vertical ? Point{road.centre, mid} : Point{mid, road.centre};
+            const float sign = (k++ % 2 == 0) ? 1.0f : -1.0f;
+            const Point travel = road.vertical ? Point{0.0f, sign} : Point{sign, 0.0f};
+            stages_.push_back(RoadNetwork::laneCentre(centre, travel));
+        }
+    }
+}
+
+void TrafficSystem::buildRoutes() {
+    // Every route is a closed list of grid waypoints (intersection centres
+    // or road ends just off the map); RoadNetwork::buildRoute turns it into
+    // lane-correct straights, Bezier corners and U-turns at road ends.
+    const auto xs = network_.columns();
+    const auto ys = network_.rows();
+    const int nx = static_cast<int>(xs.size());
+    const int ny = static_cast<int>(ys.size());
+    const float off = 60.0f;
+    const float right = RoadNetwork::WorldWidth + off;
+    const float bottom = RoadNetwork::WorldHeight + off;
+    auto node = [&](int i, int j) { return Point{xs[i], ys[j]}; };
+
+    std::vector<std::vector<Point>> plans;
+
+    // 1. Round every grid cell, both ways (all-left and all-right turns).
+    for (int i = 0; i + 1 < nx; ++i) {
+        for (int j = 0; j + 1 < ny; ++j) {
+            const Point a = node(i, j), b = node(i + 1, j);
+            const Point c = node(i + 1, j + 1), d = node(i, j + 1);
+            plans.push_back({a, b, c, d});
+            plans.push_back({d, c, b, a});
+        }
+    }
+
+    // 2. Round the whole grid, when it has more than one cell.
+    if (nx > 2 || ny > 2) {
+        const Point a = node(0, 0), b = node(nx - 1, 0);
+        const Point c = node(nx - 1, ny - 1), d = node(0, ny - 1);
+        plans.push_back({a, b, c, d});
+        plans.push_back({d, c, b, a});
+    }
+
+    // 3. Straight along every road, end to end (U-turns off the map).
+    for (float y : ys) plans.push_back({{-off, y}, {right, y}});
+    for (float x : xs) plans.push_back({{x, -off}, {x, bottom}});
+
+    // 4. Zig-zags between neighbouring roads: in from the map edge, turn at
+    //    the far junction, back along the next road.
+    for (int j = 0; j + 1 < ny; ++j)
+        plans.push_back({{-off, ys[j]}, node(nx - 1, j), node(nx - 1, j + 1), {-off, ys[j + 1]}});
+    for (int i = 0; i + 1 < nx; ++i)
+        plans.push_back({{xs[i], -off}, node(i, ny - 1), node(i + 1, ny - 1), {xs[i + 1], -off}});
+
+    routes_.clear();
+    for (const auto& waypoints : plans)
+        routes_.push_back(makeRoute(waypoints));
 }
 
 void TrafficSystem::reset() {
     vehicles_.clear();
-    spawn(vehicleCount_, seed_);
+    spawn(vehicleCountFor(density_, static_cast<int>(network_.intersections().size())), seed_);
 }
 
 void TrafficSystem::spawn(int count, unsigned seed) {
@@ -110,8 +170,23 @@ TrafficSystem::makeRoute(const std::vector<Point>& waypoints) const {
     const auto& stopLines = network_.stopLines();
 
     Point previous = route->path.pointAtDistance(0.0f);
+    int inside = network_.junctionAt(previous);
+    float enteredAt = 0.0f;
     for (float s = step; s <= length; s += step) {
         const Point current = route->path.pointAtDistance(s);
+
+        // Entering / leaving an intersection box.
+        const int box = network_.junctionAt(current);
+        if (box != inside) {
+            if (inside >= 0) {
+                const Point in = route->path.directionAtDistance(enteredAt);
+                const Point out = route->path.directionAtDistance(s);
+                route->junctions.push_back({inside, enteredAt, s,
+                                            in.x * out.x + in.y * out.y < 0.7f});
+            }
+            if (box >= 0) enteredAt = s;
+            inside = box;
+        }
         for (int i = 0; i < static_cast<int>(stopLines.size()); ++i) {
             const StopLine& line = stopLines[i];
             const float t = segmentHit(previous, current, line.a, line.b);
@@ -135,6 +210,11 @@ TrafficSystem::makeRoute(const std::vector<Point>& waypoints) const {
         }
         previous = current;
     }
+    if (inside >= 0) {
+        const Point in = route->path.directionAtDistance(enteredAt);
+        const Point out = route->path.directionAtDistance(length);
+        route->junctions.push_back({inside, enteredAt, length, in.x * out.x + in.y * out.y < 0.7f});
+    }
     return route;
 }
 
@@ -156,6 +236,33 @@ void TrafficSystem::plan(const TrafficLights& lights,
             if (i == j) continue;
             hits[i * n + j] = TrafficRules::corridorCheck(
                 pos, dir, v.halfLength(), v.halfWidth(), Lookahead, footprints[j]);
+        }
+    }
+
+    // Junction boxes: who is inside (or about to enter) which box.
+    struct BoxState {
+        int junction{-1};
+        bool inside{false};
+        bool turns{false};
+        float toEnter{0.0f};    // distance from the front bumper to the box
+    };
+    std::vector<BoxState> boxes(n);
+    for (std::size_t i = 0; i < n; ++i) {
+        const TrafficVehicle& v = vehicles_[i];
+        const float length = v.route().path.length();
+        const float s = v.distance();
+        float best = 1e9f;
+        for (const auto& pass : v.route().junctions) {
+            if (s + v.halfLength() >= pass.enter && s - v.halfLength() <= pass.exit) {
+                boxes[i] = {pass.junction, true, pass.turns, 0.0f};
+                break;
+            }
+            float d = pass.enter - (s + v.halfLength());
+            if (d < 0.0f) d += length;
+            if (d < best) {
+                best = d;
+                boxes[i] = {pass.junction, false, pass.turns, d};
+            }
         }
     }
 
@@ -213,7 +320,37 @@ void TrafficSystem::plan(const TrafficLights& lights,
             }
         }
 
-        // 4. Vehicles in the forward corridor. If two vehicles block each
+        // 4. Yield at the junction box: a vehicle about to enter waits while
+        //    a conflicting vehicle is inside (or committed just ahead of it).
+        //    Conflicting = different direction, except two vehicles going
+        //    straight past each other in opposite lanes.
+        const BoxState& mine = boxes[i];
+        if (mine.junction >= 0 && !mine.inside && mine.toEnter < Lookahead) {
+            for (std::size_t j = 0; j < n; ++j) {
+                if (i == j || boxes[j].junction != mine.junction) continue;
+                const BoxState& other = boxes[j];
+                const bool committed = !other.inside && other.toEnter < 4.0f &&
+                                       vehicles_[j].speed() > 15.0f &&
+                                       (other.toEnter < mine.toEnter ||
+                                        (other.toEnter == mine.toEnter && j < i));
+                if (!other.inside && !committed) continue;
+
+                const Point od = vehicles_[j].direction();
+                const float dot = od.x * dir.x + od.y * dir.y;
+                const bool sameWay = dot > 0.9f;
+                const bool oppositeStraight = dot < -0.9f && !mine.turns && !other.turns;
+                if (sameWay || oppositeStraight) continue;
+
+                const float limit = TrafficRules::stoppingSpeed(std::max(0.0f, mine.toEnter - 2.0f), b);
+                if (limit < target) {
+                    target = limit;
+                    reason = SpeedLimiter::Yield;
+                    blocking = vehicles_[j].position();
+                }
+            }
+        }
+
+        // 5. Vehicles in the forward corridor. If two vehicles block each
         //    other (crossing paths), the one closer to the conflict goes.
         for (std::size_t j = 0; j < n; ++j) {
             if (i == j) continue;
@@ -237,7 +374,7 @@ void TrafficSystem::plan(const TrafficLights& lights,
             }
         }
 
-        // 5. Other road users (the ambulance) are treated as stopped leaders.
+        // 6. Other road users (the ambulance) are treated as stopped leaders.
         for (const auto& obstacle : obstacles) {
             const auto hit = TrafficRules::corridorCheck(
                 pos, dir, v.halfLength(), v.halfWidth(), Lookahead, obstacle);
@@ -267,8 +404,10 @@ void TrafficSystem::drawStages(IRenderer& target,
     const Rgba paint(235, 200, 60);
     for (const Point& stage : stages_) {
         // Bay outline in the lane, aligned with the road it sits on.
-        const bool vertical = std::abs(stage.x - 300.0f) < RoadNetwork::HalfWidth ||
-                              std::abs(stage.x - 800.0f) < RoadNetwork::HalfWidth;
+        bool vertical = false;
+        for (const Road& road : network_.roads())
+            if (road.vertical && std::abs(stage.x - road.centre) < RoadNetwork::HalfWidth)
+                vertical = true;
         const float hx = vertical ? 13.0f : 38.0f;
         const float hy = vertical ? 38.0f : 13.0f;
         const Point c[] = {{stage.x - hx, stage.y - hy}, {stage.x + hx, stage.y - hy},

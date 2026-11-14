@@ -20,6 +20,7 @@ SignalController::Phase nextPhase(SignalController::Phase p) {
 
 SignalController::SignalController(float offsetSeconds, SignalTiming timing)
     : timing_(timing) {
+    offset_ = offsetSeconds;
     // Start part-way through the cycle instead of simulating the offset.
     const float cycle = cycleLength();
     if (cycle > 0.0f) update(std::fmod(std::abs(offsetSeconds), cycle));
@@ -65,3 +66,5 @@ float SignalController::timeUntilChange() const {
 float SignalController::cycleLength() const {
     return 2.0f * (timing_.green + timing_.yellow + timing_.allRed);
 }
+
+float SignalController::offset() const { return offset_; }

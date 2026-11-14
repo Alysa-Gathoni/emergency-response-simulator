@@ -60,6 +60,16 @@ public:
     const std::vector<StopLine>& stopLines() const;
     const std::vector<Crosswalk>& crosswalks() const;
 
+    // Grid coordinates: x of the vertical roads and y of the horizontal
+    // roads, sorted, and the column/row of an intersection in that grid.
+    std::vector<float> columns() const;
+    std::vector<float> rows() const;
+    int columnOf(int intersection) const;
+    int rowOf(int intersection) const;
+
+    // Index of the intersection whose box contains `p`, or -1.
+    int junctionAt(Point p) const;
+
     // Land between the roads (pavement, buildings and parks go here).
     std::vector<Rect> blocks() const;
 
