@@ -5,6 +5,10 @@ LineRenderer::LineRenderer(LineMode mode) : mode_(mode) {}
 
 void LineRenderer::setMode(LineMode mode) { mode_ = mode; }
 
+void LineRenderer::setClip(const ClipRect& rect) { clip_ = rect; clipping_ = true; }
+void LineRenderer::clearClip() { clipping_ = false; }
+const ClipRect* LineRenderer::clip() const { return clipping_ ? &clip_ : nullptr; }
+
 void LineRenderer::nextMode() {
     switch (mode_) {
         case LineMode::Bresenham: mode_ = LineMode::DDA; break;
@@ -23,6 +27,18 @@ std::vector<Point> LineRenderer::rasterize(Point start, Point end) const {
 
 void LineRenderer::draw(IRenderer& target, Point start, Point end,
                         Rgba color, float pixelSize) const {
+    if (clipping_) {
+        if (target.hasModel()) {
+            // Local coordinates (hardware transform stack): test the segment
+            // in world space; if any of it is visible, draw it whole and let
+            // OpenGL clip at the window edge.
+            const Mat3 model = target.model();
+            Point a = model.apply(start), b = model.apply(end);
+            if (!Clipping::cohenSutherland(a, b, clip_)) return;
+        } else if (!Clipping::cohenSutherland(start, end, clip_)) {
+            return;                               // completely outside the view
+        }
+    }
     if (mode_ == LineMode::Native) {
         // Centre the API line on the same pixel squares our algorithms fill.
         const float h = pixelSize * 0.5f;

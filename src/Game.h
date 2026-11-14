@@ -3,6 +3,7 @@
 #include "render/GLRenderer.h"
 #include "render/SoftwareRenderer.h"
 #include <string>
+#include "core/Camera2D.h"
 #include "lines/LineRenderer.h"
 #include "city/RoadNetwork.h"
 #include "city/City.h"
@@ -58,6 +59,7 @@ private:
     TrafficLights trafficLights_{network_};
     Ambulance ambulance_{startPosition_};
     ClippingDemo clippingDemo_;
+    Camera2D camera_{Screens::Width, Screens::Height};
     Mission mission_;
     RouteGuide routeGuide_{network_};
     TrafficSystem traffic_{network_};
@@ -103,8 +105,8 @@ private:
     void stepWorld(float deltaTime);
     void trackMission();
     IRenderer& renderer(sf::RenderTarget& target);
-    void render(IRenderer& target) const;
-    void drawNightLights(IRenderer& target) const;
+    void render(IRenderer& target);
+    void drawNightLights(IRenderer& target, const ClipRect& visible) const;
     HudData hudData() const;
     BannerData bannerData() const;
     void saveScreenshot(const sf::RenderWindow& window);

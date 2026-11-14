@@ -1,4 +1,5 @@
 #include "PolygonFill.h"
+#include "Clipping.h"
 #include "../core/Raster.h"
 #include <algorithm>
 #include <cmath>
@@ -59,7 +60,34 @@ void draw(IRenderer& target,
           const LineRenderer& renderer,
           Rgba color,
           bool debug) {
-    auto spans = scanLineSpans(vertices);
+    // Camera culling: skip polygons outside the clip window and cut the
+    // ones crossing its edge with Sutherland-Hodgman before filling.
+    std::vector<Point> clipped;
+    const std::vector<Point>* shape = &vertices;
+    if (const ClipRect* clip = renderer.clip()) {
+        // Shapes drawn in local coordinates through the hardware transform
+        // stack are tested in world space and culled whole; OpenGL clips the
+        // ones that cross the window edge.
+        const bool local = target.hasModel();
+        const std::vector<Point> world = local ? target.model().apply(vertices) : std::vector<Point>{};
+        const std::vector<Point>& test = local ? world : vertices;
+
+        float minX = 1e9f, minY = 1e9f, maxX = -1e9f, maxY = -1e9f;
+        for (const Point& p : test) {
+            minX = std::min(minX, p.x); maxX = std::max(maxX, p.x);
+            minY = std::min(minY, p.y); maxY = std::max(maxY, p.y);
+        }
+        if (maxX < clip->left || minX > clip->right || maxY < clip->top || minY > clip->bottom)
+            return;
+        if (!local &&
+            (minX < clip->left || maxX > clip->right || minY < clip->top || maxY > clip->bottom)) {
+            clipped = Clipping::sutherlandHodgman(vertices, *clip);
+            if (clipped.size() < 3) return;
+            shape = &clipped;
+        }
+    }
+
+    auto spans = scanLineSpans(*shape);
 
     // Spans whose rounded ends cross (slivers thinner than a pixel) are empty.
     spans.erase(std::remove_if(spans.begin(), spans.end(),

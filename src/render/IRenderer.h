@@ -51,6 +51,11 @@ public:
     const Mat3& view() const { return view_; }
     Mat3 current() const { return stack_.empty() ? view_ : stack_.back(); }
 
+    // True while a model matrix is pushed; model() maps the coordinates
+    // being drawn to world space (view^-1 * current).
+    bool hasModel() const { return !stack_.empty(); }
+    Mat3 model() const { return view_.inverse() * current(); }
+
     // Square pixels of side `size` produced by our algorithms.
     virtual void drawPixels(const std::vector<Point>& pixels, Rgba colour, float size) = 0;
 

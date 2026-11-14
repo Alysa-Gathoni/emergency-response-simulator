@@ -24,7 +24,10 @@ DrivingInput readDrivingKeys() {
 }
 }
 
-Game::Game() = default;
+Game::Game() {
+    camera_.setWorld(RoadNetwork::WorldWidth, RoadNetwork::WorldHeight);
+    camera_.snapTo(startPosition_);
+}
 
 bool Game::handleMenuKey(sf::Keyboard::Key key) {
     using K = sf::Keyboard;
@@ -94,6 +97,7 @@ void Game::restart() {
     collisions_.reset();
     redLightCamera_.reset();
     mission_.restart(startPosition_);
+    camera_.snapTo(startPosition_);
     paused_ = false;
     runTotal_ = 0;
     callStarted_ = false;
@@ -165,9 +169,15 @@ void Game::step(float dt, const DrivingInput& input) {
     routeGuide_.update(dt, ambulance_.position(), mission_.incidentPosition(),
                        mission_.state() == Mission::State::Active);
     trackMission();
+
+    // Camera chases a point just ahead of the ambulance; crashes shake it.
+    const float a = ambulance_.heading() * 3.14159265f / 180.0f;
+    camera_.follow(ambulance_.position(),
+                   {std::cos(a) * ambulance_.speed(), std::sin(a) * ambulance_.speed()}, dt);
+    camera_.shake(ambulance_.impact());
 }
 
-void Game::drawNightLights(IRenderer& target) const {
+void Game::drawNightLights(IRenderer& target, const ClipRect& visible) const {
     std::vector<DayNight::Light> lights;
     for (const auto& v : traffic_.vehicles()) {
         const Point p = v.position();
@@ -185,7 +195,7 @@ void Game::drawNightLights(IRenderer& target) const {
     for (const auto& [position, colour] : trafficLights_.litBulbs())
         lights.push_back({position, {0.0f, 0.0f}, colour});
 
-    dayNight_.drawLights(target, lines_, lights, graphicsDebug_);
+    dayNight_.drawLights(target, lines_, lights, visible, graphicsDebug_);
 }
 
 BannerData Game::bannerData() const {
@@ -230,8 +240,16 @@ IRenderer& Game::renderer(sf::RenderTarget& target) {
     return software_;
 }
 
-void Game::render(IRenderer& target) const {
+void Game::render(IRenderer& target) {
     target.beginFrame(Colors::Background);
+
+    // World pass: camera view matrix, and everything outside the visible
+    // rectangle (or the smaller C-key window) is clipped by our algorithms
+    // before rasterisation.
+    const ClipRect visible = camera_.visible(-4.0f);
+    const ClipRect clip = clippingDebug_ ? camera_.visible(ClippingDemo::Inset) : visible;
+    target.setView(camera_.view());
+    lines_.setClip(clip);
 
     city_.draw(target, lines_, graphicsDebug_);
     environment_.draw(target, graphicsDebug_);
@@ -242,15 +260,23 @@ void Game::render(IRenderer& target) const {
     redLightCamera_.draw(target, lines_);
     collisions_.draw(target, lines_, graphicsDebug_);
 
-    // Night: tint the finished scene, then draw lights on top of it.
-    dayNight_.drawOverlay(target, lines_);
-    drawNightLights(target);
+    // Night: tint the finished scene (screen space), then lights on top.
+    target.setView(Mat3::identity());
+    lines_.clearClip();
+    dayNight_.drawOverlay(target, lines_, Screens::Width, Screens::Height);
+    target.setView(camera_.view());
+    lines_.setClip(clip);
+    drawNightLights(target, clip);
 
     // Guidance stays bright at night: route and incident marker on top.
     routeGuide_.draw(target, lines_, mission_.colour(), graphicsDebug_);
     mission_.draw(target, lines_, graphicsDebug_);
 
-    clippingDemo_.draw(target, lines_, clippingDebug_);
+    lines_.clearClip();
+    clippingDemo_.draw(target, lines_, clippingDebug_, clip);
+
+    // Screen pass: HUD, menus and panels.
+    target.setView(Mat3::identity());
 
     switch (screen_) {
         case Screen::Title:
@@ -296,8 +322,8 @@ void Game::saveScreenshot(const sf::RenderWindow& window) {
 
 int Game::run() {
     sf::RenderWindow window(
-        sf::VideoMode(static_cast<unsigned>(RoadNetwork::WorldWidth),
-                      static_cast<unsigned>(RoadNetwork::WorldHeight)),
+        sf::VideoMode(static_cast<unsigned>(Screens::Width),
+                      static_cast<unsigned>(Screens::Height)),
         "Emergency Response Simulator",
         sf::Style::Titlebar | sf::Style::Close);
     window.setVerticalSyncEnabled(true);
@@ -366,8 +392,8 @@ int Game::renderScreenshot(const std::string& path, float seconds, const std::st
     }
 
     sf::RenderTexture canvas;
-    if (!canvas.create(static_cast<unsigned>(RoadNetwork::WorldWidth),
-                       static_cast<unsigned>(RoadNetwork::WorldHeight)))
+    if (!canvas.create(static_cast<unsigned>(Screens::Width),
+                       static_cast<unsigned>(Screens::Height)))
         return 1;
     render(renderer(canvas));
     canvas.display();
