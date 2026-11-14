@@ -25,6 +25,10 @@ DrivingInput readDrivingKeys() {
 }
 
 Game::Game() {
+    // No car may start on top of the ambulance in front of the hospital.
+    traffic_.keepClear(startPosition_, 140.0f);
+    traffic_.reset();
+    routeGuide_.setEdgeFactors(&congestion_.factors());
     camera_.setWorld(network_.width(), network_.height());
     camera_.snapTo(startPosition_);
 }
@@ -81,6 +85,7 @@ bool Game::handleKey(sf::Keyboard::Key key) {
         case sf::Keyboard::C: clippingDebug_ = !clippingDebug_; break;
         case sf::Keyboard::B: curveDebug_ = !curveDebug_; break;
         case sf::Keyboard::V: routeGuide_.setCompare(!routeGuide_.comparing()); break;
+        case sf::Keyboard::E: sirenMuted_ = !sirenMuted_; break;
         case sf::Keyboard::T: dayNight_.nextMode(); break;
         case sf::Keyboard::P: paused_ = !paused_; break;
         case sf::Keyboard::R: restart(); break;
@@ -95,6 +100,7 @@ void Game::restart() {
     // starting state, counters cleared, first call again.
     ambulance_.resetTo(startPosition_, 0.0f);
     traffic_.reset();
+    congestion_.reset();
     trafficLights_.reset();
     collisions_.reset();
     redLightCamera_.reset();
@@ -114,14 +120,33 @@ void Game::startShift() {
     helpAutoHidden_ = false;
 }
 
+bool Game::sirenOn() const {
+    // Lights and siren while responding (to the scene or the hospital).
+    return mission_.driving() && !sirenMuted_;
+}
+
+void Game::updateTraffic(float dt, bool siren) {
+    // Traffic must not drive into the ambulance or people on a crossing,
+    // and makes way when the siren is on.
+    const float a = ambulance_.heading() * 3.14159265f / 180.0f;
+    traffic_.setEmergency({siren, ambulance_.position(), {std::cos(a), std::sin(a)}, ambulance_.speed()});
+    auto obstacles = pedestrians_.footprints();
+    obstacles.push_back(ambulance_.footprint());
+    traffic_.update(dt, trafficLights_, obstacles);
+
+    std::vector<Congestion::Sample> samples;
+    samples.reserve(traffic_.vehicles().size());
+    for (const auto& v : traffic_.vehicles())
+        samples.push_back({v.position(), v.speed(), v.pullingOver()});
+    congestion_.update(dt, samples);
+}
+
 void Game::stepWorld(float dt) {
     // Everything that lives on without the player (also behind the menus).
     trafficLights_.update(dt);
     dayNight_.update(dt);
     pedestrians_.update(dt, trafficLights_);
-    auto obstacles = pedestrians_.footprints();
-    obstacles.push_back(ambulance_.footprint());
-    traffic_.update(dt, trafficLights_, obstacles);
+    updateTraffic(dt, false);
 }
 
 void Game::trackMission() {
@@ -173,11 +198,7 @@ void Game::step(float dt, const DrivingInput& input) {
     trafficLights_.update(dt);
     dayNight_.update(dt);
     pedestrians_.update(dt, trafficLights_);
-
-    // Traffic must not drive into the ambulance or people on a crossing.
-    auto obstacles = pedestrians_.footprints();
-    obstacles.push_back(ambulance_.footprint());
-    traffic_.update(dt, trafficLights_, obstacles);
+    updateTraffic(dt, sirenOn());
 
     collisions_.update(ambulance_, city_, traffic_, dt);
     mission_.update(dt, ambulance_.position(), ambulance_.speed());
@@ -304,6 +325,7 @@ void Game::render(IRenderer& target) {
     drawNightLights(target, clip);
 
     // Guidance stays bright at night: route and incident marker on top.
+    if (routeGuide_.comparing() && mission_.driving()) congestion_.draw(target, lines_);
     routeGuide_.drawComparison(target, lines_);
     routeGuide_.draw(target, lines_, mission_.colour(), graphicsDebug_);
     mission_.draw(target, lines_, graphicsDebug_);

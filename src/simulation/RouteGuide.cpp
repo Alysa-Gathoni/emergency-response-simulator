@@ -47,9 +47,9 @@ std::vector<Point> RouteGuide::plan(const RoadGraph& graph, Point from, Point to
 }
 
 std::vector<Point> RouteGuide::planWithSearch(Point from, Point to) {
-    search_ = Pathfinding::fromRoads(graph_);
-    const int start = Pathfinding::joinRoad(search_, graph_, from);
-    const int goal = Pathfinding::joinRoad(search_, graph_, to);
+    search_ = Pathfinding::fromRoads(graph_, factors_);
+    const int start = Pathfinding::joinRoad(search_, graph_, from, factors_);
+    const int goal = Pathfinding::joinRoad(search_, graph_, to, factors_);
     aStar_ = Pathfinding::aStar(search_, start, goal);
     if (compare_) dijkstra_ = Pathfinding::dijkstra(search_, start, goal);
     return toPolyline(search_, aStar_, from, to);
@@ -134,12 +134,6 @@ void RouteGuide::draw(IRenderer& target, const LineRenderer& lines,
 void RouteGuide::drawComparison(IRenderer& target, const LineRenderer& lines) const {
     if (!compare_ || !active_) return;
 
-    // The road graph itself: every edge as a thin line.
-    const Rgba edgeColour(120, 200, 255, 150);
-    for (const GraphEdge& e : graph_.edges())
-        lines.draw(target, graph_.nodes()[static_cast<std::size_t>(e.from)].position,
-                   graph_.nodes()[static_cast<std::size_t>(e.to)].position, edgeColour, 1.0f);
-
     // Dijkstra: blue rings round every settled node.
     const Rgba dijkstraColour(90, 160, 255);
     for (int node : dijkstra_.expanded) {
@@ -173,7 +167,7 @@ void RouteGuide::drawComparisonPanel(IRenderer& target, const LineRenderer& line
     line(10, "PATHFINDING (V)", Rgba(230, 230, 230));
     line(32, "DIJKSTRA " + std::to_string(dijkstra_.expanded.size()) + " NODES", Rgba(90, 160, 255));
     line(52, "A-STAR   " + std::to_string(aStar_.expanded.size()) + " NODES", Rgba(255, 170, 60));
-    line(72, same ? "SAME COST " + std::to_string(static_cast<int>(std::lround(aStar_.cost * MetresPerPixel))) + " M"
+    line(72, same ? "SAME COST " + std::to_string(static_cast<int>(std::lround(aStar_.cost * MetresPerPixel)))
                   : std::string("COSTS DIFFER"),
          same ? Rgba(120, 220, 150) : Rgba(235, 80, 70));
 }

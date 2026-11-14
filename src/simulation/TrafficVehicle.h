@@ -28,7 +28,7 @@ struct TrafficRoute {
 };
 
 // Why a vehicle is not driving at its cruise speed (shown in the debug view).
-enum class SpeedLimiter { Free, Corner, Signal, Leader, Stage, Yield };
+enum class SpeedLimiter { Free, Corner, Signal, Leader, Stage, Yield, Siren };
 
 class TrafficVehicle {
 public:
@@ -41,6 +41,14 @@ public:
     // Planning and integration are separate so every vehicle plans from the
     // same snapshot of the traffic before anyone moves.
     void setTarget(float targetSpeed, SpeedLimiter reason, Point blockingPoint);
+
+    // Pulling over for an ambulance: the vehicle eases sideways towards the
+    // kerb (left in Kenya) by up to PullOverOffset and back when released.
+    static constexpr float PullOverOffset = 20.0f;
+    static constexpr float PullOverRate = 30.0f;   // px/s sideways
+    void setPullOver(bool pullOver) { pullOver_ = pullOver; }
+    bool pullingOver() const { return pullOver_; }
+    float lateralOffset() const { return lateral_; }
     void integrate(float deltaTime);
 
     const TrafficRoute& route() const;
@@ -79,6 +87,8 @@ private:
 
     float targetSpeed_{0.0f};
     SpeedLimiter limiter_{SpeedLimiter::Free};
+    bool pullOver_{false};
+    float lateral_{0.0f};    // px towards the kerb
     Point blockingPoint_{};
 
     void updateStage();
