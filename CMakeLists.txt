@@ -172,3 +172,18 @@ add_executable(test_scoring
 )
 target_include_directories(test_scoring PRIVATE src)
 add_test(NAME scoring COMMAND test_scoring)
+
+add_executable(test_render_paths
+    tests/test_render_paths.cpp
+    src/simulation/VehicleModels.cpp
+    src/simulation/VehicleType.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_render_paths PRIVATE src)
+add_test(NAME render_paths COMMAND test_render_paths)

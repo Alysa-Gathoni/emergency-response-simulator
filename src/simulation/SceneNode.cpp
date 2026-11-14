@@ -29,7 +29,15 @@ void SceneNode::draw(IRenderer& target,
                      const Mat3& parentWorld,
                      bool debug) const {
     if (!visible) return;
-    const Mat3 world = parentWorld * local;
+
+    // Two ways to place a node, both world(child) = world(parent) * local:
+    //  - OpenGL: push `local` on the renderer's matrix stack (glPushMatrix /
+    //    glMultMatrix equivalent), rasterise the shape in its own local
+    //    frame and let the graphics card transform the result;
+    //  - software: multiply on the CPU and rasterise in world space.
+    const bool hardware = target.hardwareTransforms();
+    if (hardware) target.pushTransform(local);
+    const Mat3 world = hardware ? Mat3::identity() : parentWorld * local;
 
     switch (kind) {
     case Kind::Group:
@@ -80,6 +88,8 @@ void SceneNode::draw(IRenderer& target,
         lines.draw(target, o, world.apply(Point{10, 0}), Rgba(235, 80, 80), 1.0f);
         lines.draw(target, o, world.apply(Point{0, 10}), Rgba(80, 220, 120), 1.0f);
     }
+
+    if (hardware) target.popTransform();
 }
 
 std::unique_ptr<SceneNode> makeGroup(const std::string& name, const Mat3& local) {
