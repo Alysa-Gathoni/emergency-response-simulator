@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(EmergencyResponseSimulator VERSION 0.6.0 LANGUAGES CXX)
+project(EmergencyResponseSimulator VERSION 0.7.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,6 +8,7 @@ find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
 add_executable(EmergencyResponseSimulator
     src/main.cpp
+    src/Game.cpp
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
