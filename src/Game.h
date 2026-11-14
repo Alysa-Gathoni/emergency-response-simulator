@@ -89,7 +89,8 @@ private:
     int bestScore_{0};
     MissionReport lastReport_;
     ScoreBreakdown lastScore_;
-    Mission::State lastMissionState_{Mission::State::Active};
+    Mission::State lastMissionState_{Mission::State::EnRoute};
+    bool transportCounted_{false};
     int callStartCollisions_{0};
     int callStartRedLights_{0};
     float callRouteLength_{0.0f};

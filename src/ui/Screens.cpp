@@ -118,7 +118,7 @@ void drawResult(IRenderer& target, const LineRenderer& lines,
                 const MissionReport& r, const ScoreBreakdown& s, int runTotal) {
     dim(target, lines, 110);
     panel(target, lines, 300, 150, 800, 570);
-    centred(target, "PATIENT REACHED", 176, 3, Good);
+    centred(target, r.delivered ? "PATIENT DELIVERED" : "SCENE SECURED", 176, 3, Good);
     centred(target, CallNames[std::clamp(r.incidentType, 0, 2)], 210, 2, Muted);
 
     float y = 252;

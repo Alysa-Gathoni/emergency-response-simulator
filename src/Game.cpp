@@ -103,7 +103,8 @@ void Game::restart() {
     paused_ = false;
     runTotal_ = 0;
     callStarted_ = false;
-    lastMissionState_ = Mission::State::Active;
+    transportCounted_ = false;
+    lastMissionState_ = Mission::State::EnRoute;
     screen_ = Screen::Playing;
 }
 
@@ -128,20 +129,32 @@ void Game::trackMission() {
 
     // A new call has just come in: remember where the counters stood and
     // how long the shortest route is (for the par time).
-    if (!callStarted_ && state == Mission::State::Active) {
+    if (!callStarted_ && state == Mission::State::EnRoute) {
         callStarted_ = true;
+        transportCounted_ = false;
         callStartCollisions_ = collisions_.collisions();
         callStartRedLights_ = redLightCamera_.violations();
         callRouteLength_ = routeGuide_.remaining();
     }
+    // Patient on board: the hospital leg adds its own shortest route.
+    if (state == Mission::State::Transport && !transportCounted_) {
+        transportCounted_ = true;
+        callRouteLength_ += routeGuide_.remaining();
+    }
 
-    if (lastMissionState_ == Mission::State::Active && state != Mission::State::Active) {
+    if (!mission_.finished() || !callStarted_) {
+        lastMissionState_ = state;
+        return;
+    }
+    if (lastMissionState_ != state) {
+        const bool arrived = state == Mission::State::Completed;
         lastReport_ = MissionReport{};
         lastReport_.incidentType = static_cast<int>(mission_.type());
-        lastReport_.arrived = state == Mission::State::Arrived;
-        lastReport_.elapsed = state == Mission::State::Arrived ? mission_.lastResponseTime()
-                                                              : mission_.elapsed();
+        lastReport_.arrived = arrived;
+        lastReport_.elapsed = arrived ? mission_.lastResponseTime() : mission_.drivingTime();
         lastReport_.routeLength = callRouteLength_;
+        lastReport_.stops = transportCounted_ ? 2 : 1;
+        lastReport_.delivered = arrived && transportCounted_;
         lastReport_.collisions = collisions_.collisions() - callStartCollisions_;
         lastReport_.redLights = redLightCamera_.violations() - callStartRedLights_;
         lastScore_ = Scoring::score(lastReport_);
@@ -168,8 +181,7 @@ void Game::step(float dt, const DrivingInput& input) {
 
     collisions_.update(ambulance_, city_, traffic_, dt);
     mission_.update(dt, ambulance_.position(), ambulance_.speed());
-    routeGuide_.update(dt, ambulance_.position(), mission_.incidentPosition(),
-                       mission_.state() == Mission::State::Active);
+    routeGuide_.update(dt, ambulance_.position(), mission_.target(), mission_.driving());
     trackMission();
 
     // Camera chases a point just ahead of the ambulance; crashes shake it.
@@ -203,10 +215,14 @@ void Game::drawNightLights(IRenderer& target, const ClipRect& visible) const {
 BannerData Game::bannerData() const {
     BannerData b;
     switch (mission_.state()) {
-        case Mission::State::Active:  b.phase = BannerData::Phase::EnRoute; break;
-        case Mission::State::Arrived: b.phase = BannerData::Phase::Arrived; break;
-        case Mission::State::Missed:  b.phase = BannerData::Phase::Missed; break;
+        case Mission::State::EnRoute:   b.phase = BannerData::Phase::EnRoute; break;
+        case Mission::State::OnScene:   b.phase = BannerData::Phase::OnScene; break;
+        case Mission::State::Transport: b.phase = BannerData::Phase::Transport; break;
+        case Mission::State::Completed: b.phase = BannerData::Phase::Arrived; break;
+        case Mission::State::Missed:    b.phase = BannerData::Phase::Missed; break;
     }
+    b.treatment = mission_.treatmentProgress();
+    b.delivered = Mission::needsHospital(mission_.type());
     b.incidentType = static_cast<int>(mission_.type());
     b.metresToGo = Hud::metres(routeGuide_.remaining());
     b.nearScene = mission_.distanceRemaining() < Mission::ArrivalRadius * 3.0f;

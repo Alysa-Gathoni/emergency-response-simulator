@@ -13,8 +13,8 @@ int baseScore(int incidentType) {
     return 400;
 }
 
-float parTime(float routeLength) {
-    return std::max(0.0f, routeLength) / ParSpeed + StopAllowance;
+float parTime(float routeLength, int stops) {
+    return std::max(0.0f, routeLength) / ParSpeed + StopAllowance * std::max(1, stops);
 }
 
 char grade(int total, int base) {
@@ -27,7 +27,7 @@ char grade(int total, int base) {
 
 ScoreBreakdown score(const MissionReport& r) {
     ScoreBreakdown s;
-    s.parTime = parTime(r.routeLength);
+    s.parTime = parTime(r.routeLength, r.stops);
     if (!r.arrived) return s;                          // missed call: nothing
 
     s.base = baseScore(r.incidentType);

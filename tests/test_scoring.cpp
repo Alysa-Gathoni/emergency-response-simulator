@@ -8,6 +8,18 @@ void parTimeFollowsRouteLength() {
     CHECK_NEAR(Scoring::parTime(900.0f), 900.0f / Scoring::ParSpeed + Scoring::StopAllowance, 1e-4f);
 }
 
+void twoLegsGetTwoStops() {
+    // Scene + hospital: both routes summed, a stop allowance for each stop.
+    CHECK_NEAR(Scoring::parTime(900.0f, 2), 900.0f / Scoring::ParSpeed + 2 * Scoring::StopAllowance, 1e-4f);
+    MissionReport r;
+    r.arrived = true;
+    r.delivered = true;
+    r.stops = 2;
+    r.routeLength = 900.0f;       // par = 10 + 10 = 20 s
+    r.elapsed = 15.0f;
+    CHECK(Scoring::score(r).timeBonus == 50);
+}
+
 void cleanFastRun() {
     MissionReport r;
     r.incidentType = 0;           // medical, base 500
@@ -74,6 +86,7 @@ void grades() {
 }
 
 int main() {
+    twoLegsGetTwoStops();
     parTimeFollowsRouteLength();
     cleanFastRun();
     bonusIsCapped();

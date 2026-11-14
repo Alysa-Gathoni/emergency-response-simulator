@@ -70,6 +70,24 @@ void bannerFollowsTheMission() {
     d.phase = BannerData::Phase::Missed;
     CHECK(ObjectiveBanner::text(d).headline == "TOO LATE");
 
+    d.delivered = true;
+    d.phase = BannerData::Phase::Arrived;
+    CHECK(ObjectiveBanner::text(d).headline == "PATIENT DELIVERED IN 23 S");
+
+    BannerData scene;
+    scene.phase = BannerData::Phase::OnScene;
+    scene.treatment = 0.4f;
+    CHECK(ObjectiveBanner::text(scene).headline == "MEDICAL CALL - ON SCENE");
+    CHECK(ObjectiveBanner::text(scene).instruction == "CREW AT WORK, STAY STOPPED 40%");
+
+    BannerData transport;
+    transport.phase = BannerData::Phase::Transport;
+    transport.metresToGo = 420;
+    CHECK(ObjectiveBanner::text(transport).headline == "TO HOSPITAL - 420 M TO GO");
+    CHECK(ObjectiveBanner::text(transport).instruction == "PATIENT ON BOARD, FOLLOW THE ROUTE");
+    transport.nearScene = true;
+    CHECK(ObjectiveBanner::text(transport).instruction == "STOP IN THE HOSPITAL BAY");
+
     BannerData fire;
     fire.incidentType = 1;
     fire.metresToGo = -4;                        // never shows a negative distance

@@ -5,7 +5,11 @@
 //   score     = max(0, base + timeBonus - collisions * CollisionPenalty
 //                                       - redLights  * RedLightPenalty)
 //   timeBonus = clamp(parTime - elapsed, 0, MaxBonusSeconds) * BonusPerSecond
-//   parTime   = routeLength / ParSpeed + StopAllowance
+//   parTime   = routeLength / ParSpeed + StopAllowance * stops
+//
+// A call with a patient has two legs (scene, then hospital): routeLength
+// is the sum of both shortest routes and there are two stops. Time spent
+// treating on scene is not counted.
 //
 // parTime is what a careful driver needs for the shortest route at the
 // start of the call, so beating it is rewarded and a reckless fast run
@@ -14,7 +18,9 @@ struct MissionReport {
     int incidentType{0};       // 0 medical, 1 fire, 2 accident
     bool arrived{false};       // false = time limit exceeded
     float elapsed{0.0f};       // seconds
-    float routeLength{0.0f};   // pixels, shortest route when the call came in
+    float routeLength{0.0f};   // pixels, shortest route(s) when each leg started
+    int stops{1};              // 2 when the patient was taken to hospital
+    bool delivered{false};     // patient handed over at the hospital
     int collisions{0};         // during this call only
     int redLights{0};          // during this call only
 };
@@ -39,7 +45,7 @@ constexpr int CollisionPenalty = 50;
 constexpr int RedLightPenalty = 30;
 
 int baseScore(int incidentType);
-float parTime(float routeLength);
+float parTime(float routeLength, int stops = 1);
 ScoreBreakdown score(const MissionReport& report);
 
 // Grade against the call's base score:

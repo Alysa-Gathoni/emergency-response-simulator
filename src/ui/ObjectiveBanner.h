@@ -9,9 +9,12 @@
 //   driving there   "MEDICAL CALL - 350 M TO GO" / "FOLLOW THE ROUTE, ..."
 //   close to it     "... SLOW DOWN AND STOP ON THE MARKER"
 //   stopping        "... HOLD STILL"
-//   arrived/missed  "ARRIVED IN 23 S" or "TOO LATE" / "NEXT CALL COMING UP"
+//   on scene        "MEDICAL CALL - ON SCENE" / "CREW AT WORK, STAY STOPPED 40%"
+//   transport       "TO HOSPITAL - 420 M TO GO" / "PATIENT ON BOARD, ..."
+//   arrived/missed  "ARRIVED IN 23 S" or "PATIENT DELIVERED IN 51 S" or
+//                   "TOO LATE" / "NEXT CALL COMING UP"
 struct BannerData {
-    enum class Phase { EnRoute, Arrived, Missed };
+    enum class Phase { EnRoute, OnScene, Transport, Arrived, Missed };
 
     Phase phase{Phase::EnRoute};
     int incidentType{0};        // 0 medical, 1 fire, 2 accident
@@ -19,6 +22,8 @@ struct BannerData {
     bool nearScene{false};      // close enough to start stopping
     bool holding{false};        // stopped inside the arrival radius
     float responseTime{0.0f};   // seconds, once arrived
+    float treatment{0.0f};      // 0..1 while on scene
+    bool delivered{false};      // the call ended at the hospital
 };
 
 class ObjectiveBanner {
