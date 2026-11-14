@@ -36,6 +36,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/TrafficRules.cpp
     src/simulation/TrafficVehicle.cpp
     src/simulation/TrafficSystem.cpp
+    src/simulation/VehicleModels.cpp
     src/simulation/VehicleType.cpp
 )
 
