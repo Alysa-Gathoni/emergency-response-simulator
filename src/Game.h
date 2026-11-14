@@ -15,7 +15,9 @@
 #include "simulation/Mission.h"
 #include "simulation/RouteGuide.h"
 #include "simulation/TrafficSystem.h"
+#include "ui/HelpPanel.h"
 #include "ui/Hud.h"
+#include "ui/ObjectiveBanner.h"
 
 // Owns every subsystem and runs the main loop.
 //
@@ -54,11 +56,14 @@ private:
     RedLightCamera redLightCamera_{network_, trafficLights_};
     CollisionSystem collisions_;
     Hud hud_;
+    HelpPanel help_;
+    ObjectiveBanner banner_;
 
     bool graphicsDebug_{false};
     bool clippingDebug_{false};
     bool curveDebug_{false};
     bool paused_{false};
+    bool helpAutoHidden_{false};   // panel folds away once, on first drive
     int screenshotCount_{0};
 
     // Returns false when the key asks to quit.
@@ -68,5 +73,6 @@ private:
     void render(sf::RenderTarget& target) const;
     void drawNightLights(sf::RenderTarget& target) const;
     HudData hudData() const;
+    BannerData bannerData() const;
     void saveScreenshot(const sf::RenderWindow& window);
 };
