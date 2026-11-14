@@ -52,7 +52,7 @@ int Hud::metres(float pixels) {
 void Hud::draw(IRenderer& target, const LineRenderer& lines,
                const HudData& d) const {
     // Translucent panel in the top-right corner (scan-line fill + outline).
-    const float left = 870, top = 8, right = 1092, bottom = 206;
+    const float left = 870, top = 8, right = 1092, bottom = 234;
     PolygonFill::draw(target, rect(left, top, right, bottom), lines, Panel, false);
     Polygon(rect(left, top, right, bottom)).drawOutline(target, lines, Frame, 1.0f);
 
@@ -83,6 +83,8 @@ void Hud::draw(IRenderer& target, const LineRenderer& lines,
     y += 28;
     row(target, lines, x, y, "DONE", std::to_string(d.completed) + "-" + std::to_string(d.missed),
         Value);
+    y += 28;
+    row(target, lines, x, y, "SCORE", std::to_string(d.score), Value);
 
     // Time bar under the panel: shrinks as the time limit runs out.
     const float fraction = std::clamp(d.timeLeft / std::max(1.0f, d.timeLimit), 0.0f, 1.0f);

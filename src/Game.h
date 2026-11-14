@@ -16,12 +16,18 @@
 #include "simulation/CollisionSystem.h"
 #include "simulation/Mission.h"
 #include "simulation/RouteGuide.h"
+#include "simulation/Scoring.h"
 #include "simulation/TrafficSystem.h"
 #include "ui/HelpPanel.h"
 #include "ui/Hud.h"
 #include "ui/ObjectiveBanner.h"
+#include "ui/Screens.h"
 
 // Owns every subsystem and runs the main loop.
+//
+// Screens:  Title -> Playing (P/Esc pause) -> Result -> Playing ...
+//                                          -> GameOver -> Title
+// On the title screen the city keeps running behind the menu.
 //
 // The simulation advances in fixed steps of 1/60 s (an accumulator
 // collects real frame time), so traffic, signals and driving behave the
@@ -70,13 +76,32 @@ private:
     bool clippingDebug_{false};
     bool curveDebug_{false};
     bool paused_{false};
+
+    enum class Screen { Title, Controls, Playing, Result, GameOver };
+    Screen screen_{Screen::Title};
+    int menuIndex_{0};
+
+    // Scoring of the current shift (one run from Start to game over).
+    int runTotal_{0};
+    int bestScore_{0};
+    MissionReport lastReport_;
+    ScoreBreakdown lastScore_;
+    Mission::State lastMissionState_{Mission::State::Active};
+    int callStartCollisions_{0};
+    int callStartRedLights_{0};
+    float callRouteLength_{0.0f};
+    bool callStarted_{false};
     bool helpAutoHidden_{false};   // panel folds away once, on first drive
     int screenshotCount_{0};
 
     // Returns false when the key asks to quit.
     bool handleKey(sf::Keyboard::Key key);
+    bool handleMenuKey(sf::Keyboard::Key key);
     void restart();
+    void startShift();
     void step(float deltaTime, const DrivingInput& input);
+    void stepWorld(float deltaTime);
+    void trackMission();
     IRenderer& renderer(sf::RenderTarget& target);
     void render(IRenderer& target) const;
     void drawNightLights(IRenderer& target) const;

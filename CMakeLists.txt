@@ -39,6 +39,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/Mission.cpp
     src/simulation/RouteGuide.cpp
     src/simulation/SceneNode.cpp
+    src/simulation/Scoring.cpp
     src/simulation/TrafficRules.cpp
     src/simulation/TrafficVehicle.cpp
     src/simulation/TrafficSystem.cpp
@@ -48,6 +49,7 @@ add_executable(EmergencyResponseSimulator
     src/ui/Hud.cpp
     src/ui/ObjectiveBanner.cpp
     src/ui/PixelFont.cpp
+    src/ui/Screens.cpp
     src/ui/SevenSegment.cpp
 )
 
@@ -163,3 +165,10 @@ add_executable(test_help_panel
 )
 target_include_directories(test_help_panel PRIVATE src)
 add_test(NAME help_panel COMMAND test_help_panel)
+
+add_executable(test_scoring
+    tests/test_scoring.cpp
+    src/simulation/Scoring.cpp
+)
+target_include_directories(test_scoring PRIVATE src)
+add_test(NAME scoring COMMAND test_scoring)

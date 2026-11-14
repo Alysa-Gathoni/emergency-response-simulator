@@ -49,7 +49,7 @@ const std::vector<Row> Rows = {
     {"L",                                  "LINE ALGORITHM"},
     {"O",                                  "OPENGL / SOFTWARE"},
     {"F12",                                "SCREENSHOT"},
-    {"ESC",                                "QUIT"},
+    {"ESC",                                "PAUSE / MENU"},
 };
 
 std::vector<Point> rect(float l, float t, float r, float b) {
