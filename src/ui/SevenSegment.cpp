@@ -105,9 +105,9 @@ float textWidth(const std::string& text, float height) {
     return w;
 }
 
-void drawText(sf::RenderTarget& target, const LineRenderer& lines,
+void drawText(IRenderer& target, const LineRenderer& lines,
               const std::string& text, Point origin, float height,
-              sf::Color colour, sf::Color unlit) {
+              Rgba colour, Rgba unlit) {
     const float t = height * 0.14f;
     Point cursor{origin.x + t * 0.5f, origin.y};
 

@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <utility>
 #include <vector>
 #include "RoadNetwork.h"
@@ -23,9 +23,9 @@ public:
     const SignalController& controller(int intersection) const;
 
     // Centre and colour of every lit bulb (used for the night glow).
-    std::vector<std::pair<Point, sf::Color>> litBulbs() const;
+    std::vector<std::pair<Point, Rgba>> litBulbs() const;
 
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const LineRenderer& lines,
               bool debug) const;
 

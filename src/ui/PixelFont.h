@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <array>
 #include <cstdint>
 #include <string>
@@ -37,7 +37,7 @@ float textWidth(const std::string& text, int scale);
 std::vector<std::pair<Point, Point>> spans(const std::string& text,
                                            Point origin, int scale);
 
-void drawText(sf::RenderTarget& target, const std::string& text,
-              Point origin, int scale, sf::Color colour);
+void drawText(IRenderer& target, const std::string& text,
+              Point origin, int scale, Rgba colour);
 
 }

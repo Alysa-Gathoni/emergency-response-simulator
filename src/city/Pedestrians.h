@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <random>
 #include <vector>
 #include "RoadNetwork.h"
@@ -17,7 +17,7 @@ public:
     Pedestrians(const RoadNetwork& network, unsigned seed = 11);
 
     void update(float deltaTime, const TrafficLights& lights);
-    void draw(sf::RenderTarget& target, const LineRenderer& lines,
+    void draw(IRenderer& target, const LineRenderer& lines,
               const TrafficLights& lights, bool debug) const;
 
     // Small boxes around people on the road, so traffic gives way to them.

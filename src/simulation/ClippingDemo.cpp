@@ -5,7 +5,7 @@
 #include "../core/Raster.h"
 #include <utility>
 
-void ClippingDemo::draw(sf::RenderTarget& target,
+void ClippingDemo::draw(IRenderer& target,
                         const LineRenderer& lines,
                         bool enabled) const {
     if (!enabled) return;
@@ -18,12 +18,12 @@ void ClippingDemo::draw(sf::RenderTarget& target,
 
     // Show original geometry faintly so the clipping operation is visible.
     Polygon originalPoly(original);
-    originalPoly.drawOutline(target, lines, sf::Color(120,120,120), 1.0f);
+    originalPoly.drawOutline(target, lines, Rgba(120,120,120), 1.0f);
 
     const auto clipped = Clipping::sutherlandHodgman(original, viewport_);
     Polygon clippedPoly(clipped);
 
-    PolygonFill::draw(target, clipped, lines, sf::Color(75,115,105), false);
+    PolygonFill::draw(target, clipped, lines, Rgba(75,115,105), false);
     clippedPoly.drawOutline(target, lines, Colors::Debug, 3.0f);
     clippedPoly.drawVertices(target, Colors::Debug);
 
@@ -39,15 +39,15 @@ void ClippingDemo::draw(sf::RenderTarget& target,
     };
 
     for (const auto& [start, end] : segments) {
-        lines.draw(target, start, end, sf::Color(120,120,120), 1.0f);
+        lines.draw(target, start, end, Rgba(120,120,120), 1.0f);
 
         Point a = start;
         Point b = end;
         if (!Clipping::cohenSutherland(a, b, viewport_)) continue;
 
-        lines.draw(target, a, b, sf::Color(240,190,70), 3.0f);
-        Raster::marker(target, a, 3.0f, sf::Color(240,190,70));
-        Raster::marker(target, b, 3.0f, sf::Color(240,190,70));
+        lines.draw(target, a, b, Rgba(240,190,70), 3.0f);
+        Raster::marker(target, a, 3.0f, Rgba(240,190,70));
+        Raster::marker(target, b, 3.0f, Rgba(240,190,70));
     }
 
     // Draw clipping rectangle with the custom line renderer.

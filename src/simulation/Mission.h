@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <random>
 #include <vector>
 #include "EmergencyMarker.h"
@@ -27,14 +27,14 @@ public:
     explicit Mission(unsigned seed = 3);
 
     void update(float deltaTime, Point ambulancePosition, float ambulanceSpeed);
-    void draw(sf::RenderTarget& target, const LineRenderer& lines, bool debug) const;
+    void draw(IRenderer& target, const LineRenderer& lines, bool debug) const;
 
     // Starts again from the first call (R key).
     void restart(Point ambulancePosition);
 
     State state() const;
     IncidentType type() const;
-    sf::Color colour() const;         // marker colour of the current incident
+    Rgba colour() const;         // marker colour of the current incident
     Point incidentPosition() const;
     float elapsed() const;            // seconds since the call came in
     float timeLimit() const;

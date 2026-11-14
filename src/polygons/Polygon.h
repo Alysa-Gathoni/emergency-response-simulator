@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <vector>
 #include "../core/Mat3.h"
 #include "../core/Point.h"
@@ -24,12 +24,12 @@ public:
     void transform(const Mat3& matrix);
     Polygon transformed(const Mat3& matrix) const;
 
-    void drawOutline(sf::RenderTarget& target,
+    void drawOutline(IRenderer& target,
                      const LineRenderer& renderer,
-                     sf::Color color,
+                     Rgba color,
                      float pixelSize = 2.0f) const;
 
-    void drawVertices(sf::RenderTarget& target, sf::Color color) const;
+    void drawVertices(IRenderer& target, Rgba color) const;
 
 private:
     std::vector<Point> vertices_;

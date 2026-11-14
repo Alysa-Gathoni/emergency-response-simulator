@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <vector>
 #include "Collision.h"
 #include "../lines/LineRenderer.h"
@@ -26,7 +26,7 @@ public:
     void reset();
 
     // G debug view: boxes that were tested this frame, hits in red.
-    void draw(sf::RenderTarget& target, const LineRenderer& lines, bool debug) const;
+    void draw(IRenderer& target, const LineRenderer& lines, bool debug) const;
 
 private:
     int collisions_{0};

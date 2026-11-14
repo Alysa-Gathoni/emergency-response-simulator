@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <string>
 #include "../lines/LineRenderer.h"
 
@@ -17,7 +17,7 @@ struct HudData {
     int missed{0};
     bool arrived{false};
     bool late{false};
-    bool bresenham{true};       // current line algorithm
+    int lineMode{0};            // 0 Bresenham, 1 DDA, 2 graphics API lines
 };
 
 // Scale used for display only: 1 pixel = 0.2 m.
@@ -25,7 +25,7 @@ constexpr float MetresPerPixel = 0.2f;
 
 class Hud {
 public:
-    void draw(sf::RenderTarget& target, const LineRenderer& lines,
+    void draw(IRenderer& target, const LineRenderer& lines,
               const HudData& data) const;
 
     // mm:ss for a number of seconds (negative shown as 00:00).

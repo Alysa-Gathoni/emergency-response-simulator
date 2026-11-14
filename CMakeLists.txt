@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
+find_package(OpenGL REQUIRED)
 
 add_executable(EmergencyResponseSimulator
     src/main.cpp
@@ -16,6 +17,8 @@ add_executable(EmergencyResponseSimulator
     src/polygons/Polygon.cpp
     src/rasterization/PolygonFill.cpp
     src/rasterization/Clipping.cpp
+    src/render/GLRenderer.cpp
+    src/render/SoftwareRenderer.cpp
     src/shapes/CircleEllipse.cpp
     src/curves/Bezier.cpp
     src/curves/Spline.cpp
@@ -54,12 +57,13 @@ target_link_libraries(EmergencyResponseSimulator
     sfml-graphics
     sfml-window
     sfml-system
+    OpenGL::GL
 )
 
 # ---------------------------------------------------------------------------
 # Unit tests: plain executables using tests/Check.h, run with `ctest`.
-# Most link only the pure C++ modules; tests of code that draws (driving,
-# route guidance, HUD) also link SFML for the shared rasterizer.
+# Scene modules draw through the IRenderer interface only, so no test
+# needs SFML or OpenGL.
 # ---------------------------------------------------------------------------
 enable_testing()
 
@@ -102,7 +106,6 @@ add_executable(test_driving
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_driving PRIVATE src)
-target_link_libraries(test_driving sfml-graphics sfml-window sfml-system)
 add_test(NAME driving COMMAND test_driving)
 
 add_executable(test_collision
@@ -128,7 +131,6 @@ add_executable(test_route
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_route PRIVATE src)
-target_link_libraries(test_route sfml-graphics sfml-window sfml-system)
 add_test(NAME route COMMAND test_route)
 
 add_executable(test_hud
@@ -144,7 +146,6 @@ add_executable(test_hud
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_hud PRIVATE src)
-target_link_libraries(test_hud sfml-graphics sfml-window sfml-system)
 add_test(NAME hud COMMAND test_hud)
 
 add_executable(test_help_panel
@@ -161,5 +162,4 @@ add_executable(test_help_panel
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_help_panel PRIVATE src)
-target_link_libraries(test_help_panel sfml-graphics sfml-window sfml-system)
 add_test(NAME help_panel COMMAND test_help_panel)

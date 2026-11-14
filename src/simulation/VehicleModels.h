@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include "VehicleType.h"
 #include "../core/Mat3.h"
 #include "../lines/LineRenderer.h"
@@ -17,6 +17,6 @@ struct VehiclePose {
 };
 
 namespace VehicleModels {
-    void draw(sf::RenderTarget& target, const LineRenderer& lines,
+    void draw(IRenderer& target, const LineRenderer& lines,
               const VehiclePose& pose);
 }

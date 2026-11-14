@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <vector>
 #include "../core/Point.h"
 #include "../lines/LineRenderer.h"
@@ -9,9 +9,9 @@ namespace PolygonFill {
     std::vector<std::pair<Point, Point>>
     scanLineSpans(const std::vector<Point>& vertices);
 
-    void draw(sf::RenderTarget& target,
+    void draw(IRenderer& target,
               const std::vector<Point>& vertices,
               const LineRenderer& renderer,
-              sf::Color color,
+              Rgba color,
               bool debug = false);
 }

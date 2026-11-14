@@ -10,8 +10,8 @@ namespace {
 // Broad-phase radius: only boxes whose centre is this close are tested.
 constexpr float NearbyDistance = 160.0f;
 
-void outline(sf::RenderTarget& target, const LineRenderer& lines,
-             const AABB& b, sf::Color c) {
+void outline(IRenderer& target, const LineRenderer& lines,
+             const AABB& b, Rgba c) {
     lines.draw(target, {b.minX, b.minY}, {b.maxX, b.minY}, c, 1.0f);
     lines.draw(target, {b.maxX, b.minY}, {b.maxX, b.maxY}, c, 1.0f);
     lines.draw(target, {b.maxX, b.maxY}, {b.minX, b.maxY}, c, 1.0f);
@@ -82,11 +82,11 @@ void CollisionSystem::reset() {
     cooldown_ = 0.0f;
 }
 
-void CollisionSystem::draw(sf::RenderTarget& target, const LineRenderer& lines,
+void CollisionSystem::draw(IRenderer& target, const LineRenderer& lines,
                            bool debug) const {
     if (!debug) return;
-    for (const AABB& b : nearby_) outline(target, lines, b, sf::Color(240, 190, 70));
-    for (const AABB& b : hits_) outline(target, lines, b, sf::Color(235, 60, 60));
+    for (const AABB& b : nearby_) outline(target, lines, b, Rgba(240, 190, 70));
+    for (const AABB& b : hits_) outline(target, lines, b, Rgba(235, 60, 60));
     outline(target, lines, ambulanceBox_,
-            wasInContact_ ? sf::Color(235, 60, 60) : sf::Color(80, 220, 170));
+            wasInContact_ ? Rgba(235, 60, 60) : Rgba(80, 220, 170));
 }

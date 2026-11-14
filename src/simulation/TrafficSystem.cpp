@@ -262,9 +262,9 @@ void TrafficSystem::update(float deltaTime,
         vehicle.integrate(deltaTime);
 }
 
-void TrafficSystem::drawStages(sf::RenderTarget& target,
+void TrafficSystem::drawStages(IRenderer& target,
                                const LineRenderer& lines) const {
-    const sf::Color paint(235, 200, 60);
+    const Rgba paint(235, 200, 60);
     for (const Point& stage : stages_) {
         // Bay outline in the lane, aligned with the road it sits on.
         const bool vertical = std::abs(stage.x - 300.0f) < RoadNetwork::HalfWidth ||
@@ -280,7 +280,7 @@ void TrafficSystem::drawStages(sf::RenderTarget& target,
     }
 }
 
-void TrafficSystem::draw(sf::RenderTarget& target,
+void TrafficSystem::draw(IRenderer& target,
                          const LineRenderer& lines,
                          bool curveDebug,
                          bool trafficDebug) const {

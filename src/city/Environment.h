@@ -1,7 +1,7 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 
 class Environment {
 public:
-    void draw(sf::RenderTarget& target, bool debug) const;
+    void draw(IRenderer& target, bool debug) const;
 };

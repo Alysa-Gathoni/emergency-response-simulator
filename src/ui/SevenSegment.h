@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -29,8 +29,8 @@ float advance(char c, float height);
 
 float textWidth(const std::string& text, float height);
 
-void drawText(sf::RenderTarget& target, const LineRenderer& lines,
+void drawText(IRenderer& target, const LineRenderer& lines,
               const std::string& text, Point origin, float height,
-              sf::Color colour, sf::Color unlit = sf::Color::Transparent);
+              Rgba colour, Rgba unlit = Rgba::Transparent);
 
 }

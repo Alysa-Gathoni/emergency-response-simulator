@@ -54,10 +54,10 @@ scanLineSpans(const std::vector<Point>& vertices) {
     return spans;
 }
 
-void draw(sf::RenderTarget& target,
+void draw(IRenderer& target,
           const std::vector<Point>& vertices,
           const LineRenderer& renderer,
-          sf::Color color,
+          Rgba color,
           bool debug) {
     auto spans = scanLineSpans(vertices);
 
@@ -85,7 +85,7 @@ void draw(sf::RenderTarget& target,
     }
 
     Raster::spans(target, plain, color);
-    Raster::plot(target, highlighted, sf::Color(80, 220, 170), 1.0f);
+    Raster::plot(target, highlighted, Rgba(80, 220, 170), 1.0f);
 }
 
 }

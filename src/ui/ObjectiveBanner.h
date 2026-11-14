@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <string>
 #include "../lines/LineRenderer.h"
 
@@ -29,6 +29,6 @@ public:
     static Lines text(const BannerData& data);
 
     // `leftLimit` keeps the banner clear of the controls panel.
-    void draw(sf::RenderTarget& target, const LineRenderer& lines,
+    void draw(IRenderer& target, const LineRenderer& lines,
               const BannerData& data, float leftLimit) const;
 };

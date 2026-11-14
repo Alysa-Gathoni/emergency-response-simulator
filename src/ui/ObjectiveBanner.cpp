@@ -7,14 +7,14 @@
 
 namespace {
 
-const sf::Color Panel(12, 16, 22, 215);
-const sf::Color Frame(90, 100, 112);
-const sf::Color Instruction(230, 234, 238);
-const sf::Color Success(90, 230, 120);
-const sf::Color Failure(250, 90, 70);
+const Rgba Panel(12, 16, 22, 215);
+const Rgba Frame(90, 100, 112);
+const Rgba Instruction(230, 234, 238);
+const Rgba Success(90, 230, 120);
+const Rgba Failure(250, 90, 70);
 
 const char* CallNames[] = {"MEDICAL CALL", "FIRE CALL", "ROAD CRASH"};
-const sf::Color CallColours[] = {{235, 70, 70}, {245, 150, 40}, {240, 210, 60}};
+const Rgba CallColours[] = {{235, 70, 70}, {245, 150, 40}, {240, 210, 60}};
 
 constexpr int Scale = 2;
 constexpr float Padding = 14.0f;
@@ -47,7 +47,7 @@ ObjectiveBanner::Lines ObjectiveBanner::text(const BannerData& d) {
     return {headline, "FOLLOW THE ROUTE, STOP AT THE MARKER"};
 }
 
-void ObjectiveBanner::draw(sf::RenderTarget& target, const LineRenderer& lines,
+void ObjectiveBanner::draw(IRenderer& target, const LineRenderer& lines,
                            const BannerData& d, float leftLimit) const {
     const Lines t = text(d);
     const float textW = std::max(PixelFont::textWidth(t.headline, Scale),
@@ -65,7 +65,7 @@ void ObjectiveBanner::draw(sf::RenderTarget& target, const LineRenderer& lines,
     PolygonFill::draw(target, rect(left, Top, right, bottom), lines, Panel, false);
     Polygon(rect(left, Top, right, bottom)).drawOutline(target, lines, Frame, 1.0f);
 
-    sf::Color headlineColour = CallColours[std::clamp(d.incidentType, 0, 2)];
+    Rgba headlineColour = CallColours[std::clamp(d.incidentType, 0, 2)];
     if (d.phase == BannerData::Phase::Arrived) headlineColour = Success;
     if (d.phase == BannerData::Phase::Missed) headlineColour = Failure;
 

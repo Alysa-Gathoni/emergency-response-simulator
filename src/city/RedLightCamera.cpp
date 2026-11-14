@@ -53,13 +53,13 @@ void RedLightCamera::reset() {
     flash_ = 0.0f;
 }
 
-void RedLightCamera::draw(sf::RenderTarget& target, const LineRenderer&) const {
+void RedLightCamera::draw(IRenderer& target, const LineRenderer&) const {
     if (flash_ <= 0.0f) return;
     // Camera flash: an expanding midpoint circle that fades out.
     const float t = 1.0f - flash_ / 0.6f;
     const int radius = 10 + static_cast<int>(t * 40.0f);
-    const auto alpha = static_cast<sf::Uint8>(255.0f * (1.0f - t));
+    const auto alpha = static_cast<std::uint8_t>(255.0f * (1.0f - t));
     ShapeAlgorithms::drawPoints(target,
                                 ShapeAlgorithms::midpointCircle(flashAt_, radius),
-                                sf::Color(255, 255, 255, alpha), 3.0f);
+                                Rgba(255, 255, 255, alpha), 3.0f);
 }

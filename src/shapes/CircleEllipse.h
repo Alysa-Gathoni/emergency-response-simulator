@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include "render/IRenderer.h"
 #include <vector>
 #include "../core/Point.h"
 
@@ -12,8 +12,8 @@ namespace ShapeAlgorithms {
     std::vector<Point> filledCircle(Point center, int radius);
     std::vector<Point> filledEllipse(Point center, int radiusX, int radiusY);
 
-    void drawPoints(sf::RenderTarget& target,
+    void drawPoints(IRenderer& target,
                     const std::vector<Point>& points,
-                    sf::Color color,
+                    Rgba color,
                     float pixelSize = 2.0f);
 }

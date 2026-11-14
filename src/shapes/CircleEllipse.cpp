@@ -141,9 +141,9 @@ std::vector<Point> filledEllipse(Point center, int radiusX, int radiusY) {
     return fillOutlineRows(midpointEllipse(center, radiusX, radiusY));
 }
 
-void drawPoints(sf::RenderTarget& target,
+void drawPoints(IRenderer& target,
                 const std::vector<Point>& points,
-                sf::Color color,
+                Rgba color,
                 float pixelSize) {
     Raster::plot(target, points, color, pixelSize);
 }

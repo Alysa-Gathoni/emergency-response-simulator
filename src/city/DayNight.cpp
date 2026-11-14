@@ -48,34 +48,34 @@ void DayNight::nextMode() {
 DayNight::Mode DayNight::mode() const { return mode_; }
 float DayNight::timeOfDay() const { return time_; }
 
-sf::Color DayNight::tint() const {
+Rgba DayNight::tint() const {
     // Find the two keyframes around the current time and interpolate.
     for (std::size_t i = 0; i + 1 < std::size(Keys); ++i) {
         const Keyframe& k0 = Keys[i];
         const Keyframe& k1 = Keys[i + 1];
         if (time_ < k0.t || time_ > k1.t) continue;
         const float u = (time_ - k0.t) / (k1.t - k0.t);
-        return sf::Color(static_cast<sf::Uint8>(lerp(k0.r, k1.r, u)),
-                         static_cast<sf::Uint8>(lerp(k0.g, k1.g, u)),
-                         static_cast<sf::Uint8>(lerp(k0.b, k1.b, u)),
-                         static_cast<sf::Uint8>(lerp(k0.a, k1.a, u)));
+        return Rgba(static_cast<std::uint8_t>(lerp(k0.r, k1.r, u)),
+                         static_cast<std::uint8_t>(lerp(k0.g, k1.g, u)),
+                         static_cast<std::uint8_t>(lerp(k0.b, k1.b, u)),
+                         static_cast<std::uint8_t>(lerp(k0.a, k1.a, u)));
     }
-    return sf::Color::Transparent;
+    return Rgba::Transparent;
 }
 
 float DayNight::darkness() const {
     return std::clamp(tint().a / 165.0f, 0.0f, 1.0f);
 }
 
-void DayNight::drawOverlay(sf::RenderTarget& target, const LineRenderer& lines) const {
-    const sf::Color c = tint();
+void DayNight::drawOverlay(IRenderer& target, const LineRenderer& lines) const {
+    const Rgba c = tint();
     if (c.a == 0) return;
     const float w = RoadNetwork::WorldWidth;
     const float h = RoadNetwork::WorldHeight;
     PolygonFill::draw(target, {{0, 0}, {w, 0}, {w, h}, {0, h}}, lines, c, false);
 }
 
-void DayNight::drawLights(sf::RenderTarget& target, const LineRenderer& lines,
+void DayNight::drawLights(IRenderer& target, const LineRenderer& lines,
                           const std::vector<Light>& lights, bool debug) const {
     const float dark = darkness();
     if (dark < 0.15f) return;
@@ -85,11 +85,11 @@ void DayNight::drawLights(sf::RenderTarget& target, const LineRenderer& lines,
     // falloff without per-pixel lighting.
     const struct { float spreadDeg, reach; } layers[] = {{24.0f, 95.0f}, {11.0f, 80.0f}};
     for (const Light& light : lights) {
-        sf::Color c = light.colour;
+        Rgba c = light.colour;
 
         if (light.direction.x == 0.0f && light.direction.y == 0.0f) {
             // Round glow (signal lamps): a faint filled midpoint circle.
-            c.a = static_cast<sf::Uint8>(90.0f * dark);
+            c.a = static_cast<std::uint8_t>(90.0f * dark);
             ShapeAlgorithms::drawPoints(
                 target, ShapeAlgorithms::filledCircle(light.position, 9), c, 1.0f);
             continue;
@@ -112,7 +112,7 @@ void DayNight::drawLights(sf::RenderTarget& target, const LineRenderer& lines,
             const auto clipped = Clipping::sutherlandHodgman(cone, screen);
             if (clipped.size() < 3) continue;
 
-            c.a = static_cast<sf::Uint8>(38.0f * dark);
+            c.a = static_cast<std::uint8_t>(38.0f * dark);
             PolygonFill::draw(target, clipped, lines, c, false);
             if (debug)
                 Polygon(clipped).drawOutline(target, lines, Colors::Debug, 1.0f);
