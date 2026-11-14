@@ -6,6 +6,7 @@
 #include "city/TrafficLight.h"
 #include "city/RedLightCamera.h"
 #include "city/Environment.h"
+#include "city/Pedestrians.h"
 #include "simulation/Ambulance.h"
 #include "simulation/ClippingDemo.h"
 #include "simulation/CollisionSystem.h"
@@ -27,6 +28,7 @@ int main() {
     RoadNetwork network;
     City city(network);
     Environment environment;
+    Pedestrians pedestrians(network);
     TrafficLights trafficLights(network);
     Ambulance ambulance(startPosition);
     ClippingDemo clippingDemo;
@@ -92,7 +94,12 @@ int main() {
                                                       : DrivingInput{});
         redLightCamera.update(beforeMove, ambulance.position(), deltaTime);
         trafficLights.update(deltaTime);
-        traffic.update(deltaTime, trafficLights, {ambulance.footprint()});
+        pedestrians.update(deltaTime, trafficLights);
+
+        // Traffic must not drive into the ambulance or people on a crossing.
+        auto obstacles = pedestrians.footprints();
+        obstacles.push_back(ambulance.footprint());
+        traffic.update(deltaTime, trafficLights, obstacles);
         collisions.update(ambulance, city, traffic, deltaTime);
         mission.update(deltaTime, ambulance.position(), ambulance.speed());
         routeGuide.update(deltaTime, ambulance.position(), mission.incidentPosition(),
@@ -104,6 +111,8 @@ int main() {
         environment.draw(window, graphicsDebug);
         trafficLights.draw(window, lineRenderer, graphicsDebug);
         routeGuide.draw(window, lineRenderer, mission.colour(), graphicsDebug);
+
+        pedestrians.draw(window, lineRenderer, trafficLights, graphicsDebug);
         mission.draw(window, lineRenderer, graphicsDebug);
         traffic.draw(window, lineRenderer, curveDebug, graphicsDebug);
         ambulance.draw(window, lineRenderer, graphicsDebug);
