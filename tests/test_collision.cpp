@@ -1,5 +1,7 @@
 #include "Check.h"
 #include "simulation/Collision.h"
+#include <cmath>
+#include <vector>
 
 using namespace Collision;
 
@@ -43,6 +45,57 @@ void staysInsideWorld() {
     CHECK_NEAR(fix.y, 0.0f, 1e-5f);
 }
 
+// Rectangle of half-size (hx, hy) centred at c, rotated by `deg` degrees.
+std::vector<Point> box(Point c, float hx, float hy, float deg) {
+    const float a = deg * 3.14159265f / 180.0f, cs = std::cos(a), sn = std::sin(a);
+    std::vector<Point> out;
+    for (const Point& p : {Point{-hx, -hy}, Point{hx, -hy}, Point{hx, hy}, Point{-hx, hy}})
+        out.push_back({c.x + p.x * cs - p.y * sn, c.y + p.x * sn + p.y * cs});
+    return out;
+}
+
+void satAxisAligned() {
+    // Same case as the AABB test: overlap 2 on x, 8 on y.
+    const Contact c = sat(box({5, 5}, 5, 5, 0), box({14, 5}, 6, 4, 0));
+    CHECK(c.hit);
+    CHECK_NEAR(c.depth, 2.0f, 1e-4f);
+    CHECK_NEAR(c.normal.x, -1.0f, 1e-4f);    // a is pushed left, out of b
+    CHECK_NEAR(c.normal.y, 0.0f, 1e-4f);
+    CHECK(!sat(box({0, 0}, 5, 5, 0), box({20, 0}, 5, 5, 0)).hit);
+}
+
+void satRotatedBoxes() {
+    // Two boxes rotated 45 degrees, diagonal neighbours: their AABBs
+    // overlap (broad phase says "maybe") but SAT finds the gap.
+    const auto a = box({0, 0}, 10, 3, 45);
+    const auto b = box({12, -2}, 10, 3, 45);
+    CHECK(overlaps(boundsOf(a), boundsOf(b)));
+    CHECK(!sat(a, b).hit);
+
+    // Moved into each other along their short axis they do collide, and
+    // pushing a by normal * depth separates them.
+    const auto c = box({2, -2}, 10, 3, 45);
+    const Contact hit = sat(a, c);
+    CHECK(hit.hit);
+    CHECK(hit.depth > 0.0f);
+    CHECK_NEAR(std::hypot(hit.normal.x, hit.normal.y), 1.0f, 1e-4f);
+    std::vector<Point> moved = a;
+    for (Point& p : moved) { p.x += hit.normal.x * (hit.depth + 0.01f); p.y += hit.normal.y * (hit.depth + 0.01f); }
+    CHECK(!sat(moved, c).hit);
+}
+
+void satTriangleAndWinding() {
+    // Triangle vs box, and the result does not depend on the winding.
+    const std::vector<Point> tri = {{0, 0}, {10, 0}, {0, 10}};
+    const std::vector<Point> triReversed = {{0, 10}, {10, 0}, {0, 0}};
+    const auto near = box({6, 6}, 2, 2, 0);    // the box corner (4,4) crosses the hypotenuse
+    const auto far = box({8, 8}, 1.5f, 1.5f, 0);
+    CHECK(sat(near, tri).hit);
+    CHECK(sat(near, triReversed).hit);
+    CHECK(!sat(far, tri).hit);
+    CHECK_NEAR(sat(near, tri).depth, sat(near, triReversed).depth, 1e-4f);
+}
+
 }
 
 int main() {
@@ -50,5 +103,8 @@ int main() {
     overlapCases();
     translationUsesShallowestAxis();
     staysInsideWorld();
+    satAxisAligned();
+    satRotatedBoxes();
+    satTriangleAndWinding();
     return check::failures();
 }

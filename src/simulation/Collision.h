@@ -2,7 +2,12 @@
 #include <vector>
 #include "../core/Point.h"
 
-// Axis-aligned bounding boxes (pure C++, no rendering).
+// Collision geometry (pure C++, no rendering).
+//
+// Broad phase: axis-aligned bounding boxes (cheap, loose for rotated shapes).
+// Narrow phase: the Separating Axis Theorem on convex polygons (exact).
+//
+// Axis-aligned bounding boxes:
 //
 // Two boxes overlap exactly when their intervals overlap on BOTH axes:
 //     a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY
@@ -32,5 +37,24 @@ Point minimumTranslation(const AABB& a, const AABB& b);
 
 // Keeps a box inside the world rectangle; returns the correction applied.
 Point keepInside(const AABB& box, const AABB& world);
+
+// Separating Axis Theorem for two convex polygons (either winding).
+//
+// Two convex shapes are apart exactly when some line separates them, and
+// it is enough to try the normals of their edges as the direction of that
+// line. For each axis n both polygons are projected onto n (dot products
+// of the vertices give an interval [min, max]); if the intervals do not
+// overlap on some axis, there is no collision. Otherwise the axis with
+// the smallest overlap is the contact normal and the overlap is the depth.
+struct Contact {
+    bool hit{false};
+    Point normal{0.0f, 0.0f};   // unit, points from b towards a
+    float depth{0.0f};          // move a by normal * depth to separate
+};
+
+// Projection interval of a polygon on a unit axis.
+void project(const std::vector<Point>& polygon, Point axis, float& min, float& max);
+
+Contact sat(const std::vector<Point>& a, const std::vector<Point>& b);
 
 }

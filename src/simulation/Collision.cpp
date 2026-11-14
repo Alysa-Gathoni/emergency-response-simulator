@@ -48,4 +48,55 @@ Point keepInside(const AABB& box, const AABB& world) {
     return fix;
 }
 
+void project(const std::vector<Point>& polygon, Point axis, float& min, float& max) {
+    min = std::numeric_limits<float>::max();
+    max = std::numeric_limits<float>::lowest();
+    for (const Point& p : polygon) {
+        const float d = p.x * axis.x + p.y * axis.y;
+        min = std::min(min, d);
+        max = std::max(max, d);
+    }
+}
+
+Contact sat(const std::vector<Point>& a, const std::vector<Point>& b) {
+    Contact best;
+    if (a.size() < 3 || b.size() < 3) return best;
+    best.depth = std::numeric_limits<float>::max();
+
+    // Candidate axes: the normal of every edge of both polygons.
+    for (const std::vector<Point>* shape : {&a, &b}) {
+        const std::vector<Point>& poly = *shape;
+        for (std::size_t i = 0; i < poly.size(); ++i) {
+            const Point& p = poly[i];
+            const Point& q = poly[(i + 1) % poly.size()];
+            Point axis{-(q.y - p.y), q.x - p.x};
+            const float len = std::hypot(axis.x, axis.y);
+            if (len < 1e-6f) continue;
+            axis = {axis.x / len, axis.y / len};
+
+            float minA, maxA, minB, maxB;
+            project(a, axis, minA, maxA);
+            project(b, axis, minB, maxB);
+            const float overlap = std::min(maxA, maxB) - std::max(minA, minB);
+            if (overlap <= 0.0f) return Contact{};    // separating axis found
+
+            if (overlap < best.depth) {
+                best.depth = overlap;
+                best.normal = axis;
+            }
+        }
+    }
+
+    // Point the normal from b towards a (centroid to centroid).
+    Point ca{0, 0}, cb{0, 0};
+    for (const Point& p : a) { ca.x += p.x; ca.y += p.y; }
+    for (const Point& p : b) { cb.x += p.x; cb.y += p.y; }
+    ca = {ca.x / a.size(), ca.y / a.size()};
+    cb = {cb.x / b.size(), cb.y / b.size()};
+    if ((ca.x - cb.x) * best.normal.x + (ca.y - cb.y) * best.normal.y < 0.0f)
+        best.normal = {-best.normal.x, -best.normal.y};
+    best.hit = true;
+    return best;
+}
+
 }

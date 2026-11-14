@@ -2,13 +2,11 @@
 #include "Ambulance.h"
 #include "TrafficSystem.h"
 #include "../city/City.h"
+#include "../polygons/Triangulation.h"
 #include <algorithm>
 #include <cmath>
 
 namespace {
-
-// Broad-phase radius: only boxes whose centre is this close are tested.
-constexpr float NearbyDistance = 160.0f;
 
 void outline(IRenderer& target, const LineRenderer& lines,
              const AABB& b, Rgba c) {
@@ -18,6 +16,44 @@ void outline(IRenderer& target, const LineRenderer& lines,
     lines.draw(target, {b.minX, b.maxY}, {b.minX, b.minY}, c, 1.0f);
 }
 
+void outline(IRenderer& target, const LineRenderer& lines,
+             const std::vector<Point>& shape, Rgba c, float width) {
+    for (std::size_t i = 0; i < shape.size(); ++i)
+        lines.draw(target, shape[i], shape[(i + 1) % shape.size()], c, width);
+}
+
+bool convex(const std::vector<Point>& p) {
+    // Every corner turns the same way (sign of the 2D cross product).
+    float sign = 0.0f;
+    for (std::size_t i = 0; i < p.size(); ++i) {
+        const float c = Triangulation::cross(p[i], p[(i + 1) % p.size()], p[(i + 2) % p.size()]);
+        if (std::abs(c) < 1e-4f) continue;
+        if (sign == 0.0f) sign = c;
+        else if ((c > 0.0f) != (sign > 0.0f)) return false;
+    }
+    return true;
+}
+
+}
+
+void CollisionSystem::buildStatic(const City& city) {
+    // Convex buildings are used as they are; concave ones are split into
+    // their ear-clipped triangles, because SAT only works on convex shapes.
+    staticPieces_.clear();
+    auto add = [&](const std::vector<Point>& outlinePoints) {
+        if (convex(outlinePoints)) {
+            staticPieces_.push_back({outlinePoints, Collision::boundsOf(outlinePoints)});
+            return;
+        }
+        const auto tris = Triangulation::triangles(outlinePoints);
+        for (std::size_t i = 0; i + 2 < tris.size(); i += 3) {
+            std::vector<Point> t = {tris[i], tris[i + 1], tris[i + 2]};
+            staticPieces_.push_back({t, Collision::boundsOf(t)});
+        }
+    };
+    for (const Polygon& b : city.buildings()) add(b.vertices());
+    add(city.hospital().vertices());
+    builtFor_ = &city;
 }
 
 void CollisionSystem::update(Ambulance& ambulance,
@@ -25,36 +61,45 @@ void CollisionSystem::update(Ambulance& ambulance,
                              const TrafficSystem& traffic,
                              float deltaTime) {
     cooldown_ = std::max(0.0f, cooldown_ - deltaTime);
-    nearby_.clear();
-    hits_.clear();
+    if (builtFor_ != &city) buildStatic(city);
 
-    // Static obstacles first (buildings and hospital), then vehicles.
-    std::vector<AABB> obstacles;
-    for (const Polygon& b : city.buildings())
-        obstacles.push_back(Collision::boundsOf(b.vertices()));
-    obstacles.push_back(Collision::boundsOf(city.hospital().vertices()));
-    for (const auto& v : traffic.vehicles())
-        obstacles.push_back(Collision::boundsOf(v.footprint()));
+    vehicles_.clear();
+    for (const auto& v : traffic.vehicles()) {
+        auto shape = v.footprint();
+        const AABB box = Collision::boundsOf(shape);
+        vehicles_.push_back({std::move(shape), box});
+    }
+
+    candidates_.clear();
+    tested_.clear();
+    hits_.clear();
+    broadHits_ = 0;
 
     bool contact = false;
     // Resolving one overlap can push into another, so iterate a few times.
     for (int pass = 0; pass < 3; ++pass) {
-        ambulanceBox_ = Collision::boundsOf(ambulance.footprint());
-        const Point c = ambulanceBox_.centre();
+        ambulanceShape_ = ambulance.footprint();
+        ambulanceBox_ = Collision::boundsOf(ambulanceShape_);
         bool resolved = false;
 
-        for (const AABB& box : obstacles) {
-            const Point bc = box.centre();
-            const float reach = NearbyDistance + std::max(box.width(), box.height()) * 0.5f;
-            if (std::abs(bc.x - c.x) > reach || std::abs(bc.y - c.y) > reach) continue;
-            if (pass == 0) nearby_.push_back(box);
+        for (const std::vector<Piece>* list : {&staticPieces_, &vehicles_})
+        for (const Piece& piece : *list) {
+            // Broad phase: boxes apart -> shapes apart, nothing more to do.
+            if (!Collision::overlaps(ambulanceBox_, piece.box)) continue;
+            if (pass == 0) {
+                ++broadHits_;
+                candidates_.push_back(piece.box);
+                tested_.push_back(piece.shape);
+            }
 
-            const Point push = Collision::minimumTranslation(ambulanceBox_, box);
-            if (push.x == 0.0f && push.y == 0.0f) continue;
+            // Narrow phase: exact test on the rotated shapes.
+            const Collision::Contact hit = Collision::sat(ambulanceShape_, piece.shape);
+            if (!hit.hit) continue;
 
-            ambulance.resolveCollision(push);
-            ambulanceBox_ = Collision::boundsOf(ambulance.footprint());
-            hits_.push_back(box);
+            ambulance.resolveCollision({hit.normal.x * hit.depth, hit.normal.y * hit.depth});
+            ambulanceShape_ = ambulance.footprint();
+            ambulanceBox_ = Collision::boundsOf(ambulanceShape_);
+            hits_.push_back(piece.shape);
             contact = true;
             resolved = true;
         }
@@ -85,8 +130,9 @@ void CollisionSystem::reset() {
 void CollisionSystem::draw(IRenderer& target, const LineRenderer& lines,
                            bool debug) const {
     if (!debug) return;
-    for (const AABB& b : nearby_) outline(target, lines, b, Rgba(240, 190, 70));
-    for (const AABB& b : hits_) outline(target, lines, b, Rgba(235, 60, 60));
-    outline(target, lines, ambulanceBox_,
-            wasInContact_ ? Rgba(235, 60, 60) : Rgba(80, 220, 170));
+    for (const AABB& b : candidates_) outline(target, lines, b, Rgba(240, 190, 70));
+    for (const auto& s : tested_) outline(target, lines, s, Rgba(255, 140, 40), 1.0f);
+    for (const auto& s : hits_) outline(target, lines, s, Rgba(235, 60, 60), 2.0f);
+    outline(target, lines, ambulanceShape_,
+            wasInContact_ ? Rgba(235, 60, 60) : Rgba(80, 220, 170), 2.0f);
 }
