@@ -25,6 +25,7 @@ Rgba limiterColor(SpeedLimiter reason) {
         case SpeedLimiter::Signal: return Rgba(235, 70, 70);
         case SpeedLimiter::Leader: return Rgba(240, 170, 60);
         case SpeedLimiter::Stage:  return Rgba(220, 90, 200);
+        case SpeedLimiter::Yield:  return Rgba(250, 250, 250);
     }
     return Rgba::White;
 }

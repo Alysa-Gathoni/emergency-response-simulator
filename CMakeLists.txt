@@ -187,3 +187,27 @@ add_executable(test_render_paths
 )
 target_include_directories(test_render_paths PRIVATE src)
 add_test(NAME render_paths COMMAND test_render_paths)
+
+add_executable(test_traffic_system
+    tests/test_traffic_system.cpp
+    src/simulation/TrafficSystem.cpp
+    src/simulation/TrafficVehicle.cpp
+    src/simulation/TrafficRules.cpp
+    src/simulation/VehicleType.cpp
+    src/simulation/VehicleModels.cpp
+    src/city/RoadNetwork.cpp
+    src/city/SignalController.cpp
+    src/city/TrafficLight.cpp
+    src/curves/Bezier.cpp
+    src/curves/CatmullRom.cpp
+    src/curves/Spline.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_traffic_system PRIVATE src)
+add_test(NAME traffic_system COMMAND test_traffic_system)

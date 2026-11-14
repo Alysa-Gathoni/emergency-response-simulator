@@ -1,4 +1,5 @@
 #include "TrafficLight.h"
+#include <cmath>
 #include "../shapes/CircleEllipse.h"
 #include "../polygons/Polygon.h"
 #include "../rasterization/PolygonFill.h"
@@ -26,14 +27,17 @@ TrafficLights::TrafficLights(const RoadNetwork& network)
 }
 
 void TrafficLights::reset() {
-    // Offsets in seconds: the diagonal neighbours switch together and the
-    // others are shifted by a third of a cycle, so the grid never switches
-    // all at once and a vehicle often meets green at the next junction.
-    const float offsets[] = {0.0f, 8.0f, 8.0f, 16.0f};
+    // Offset of the junction in column c, row r of the grid:
+    //     offset = ((c + r) * 8 s) mod 24 s      (24 s = one full cycle)
+    // Diagonal neighbours switch together and direct neighbours a third of
+    // a cycle apart, so the grid never switches all at once and a vehicle
+    // often meets green at the next junction (a simple "green wave").
     const auto& nodes = network_.intersections();
     controllers_.clear();
-    for (std::size_t i = 0; i < nodes.size(); ++i)
-        controllers_.emplace_back(offsets[i % 4]);
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        const int step = network_.columnOf(static_cast<int>(i)) + network_.rowOf(static_cast<int>(i));
+        controllers_.emplace_back(std::fmod(step * 8.0f, 24.0f));
+    }
 }
 
 void TrafficLights::update(float deltaTime) {

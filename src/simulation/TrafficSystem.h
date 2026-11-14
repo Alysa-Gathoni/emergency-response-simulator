@@ -6,13 +6,25 @@
 #include "../city/RoadNetwork.h"
 #include "../city/TrafficLight.h"
 
+// How busy the roads are; used for the difficulty levels.
+enum class TrafficDensity { Low, Medium, High };
+
 class TrafficSystem {
 public:
-    // `vehicleCount` vehicles are spawned on random routes with the type
-    // mix from VehicleType.h; the seed makes every run start the same way.
+    // Routes are generated from the road grid (any number of roads), then
+    // vehicles are spawned on random routes with the type mix from
+    // VehicleType.h; the seed makes every run start the same way.
     explicit TrafficSystem(const RoadNetwork& network,
-                           int vehicleCount = 14,
+                           TrafficDensity density = TrafficDensity::Medium,
                            unsigned seed = 7);
+
+    // Vehicles per intersection: low 2.5, medium 3.5, high 5.
+    static int vehicleCountFor(TrafficDensity density, int intersections);
+
+    // Changes the density and respawns the traffic.
+    void setDensity(TrafficDensity density);
+    TrafficDensity density() const;
+    int routeCount() const;
 
     // `obstacles` are footprints of other road users the traffic must not
     // drive into (the ambulance). Civilian vehicles stop for red lights,
@@ -38,10 +50,12 @@ private:
     std::vector<std::shared_ptr<const TrafficRoute>> routes_;
     std::vector<TrafficVehicle> vehicles_;
     std::vector<Point> stages_;   // matatu stages (lane centre at the kerb)
-    int vehicleCount_;
+    TrafficDensity density_;
     unsigned seed_;
 
     void spawn(int count, unsigned seed);
+    void buildRoutes();
+    void placeStages();
     void drawStages(IRenderer& target, const LineRenderer& lines) const;
 
     std::shared_ptr<const TrafficRoute> makeRoute(const std::vector<Point>& waypoints) const;

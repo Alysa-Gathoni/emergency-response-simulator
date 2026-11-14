@@ -13,13 +13,22 @@ struct TrafficRoute {
         int stopLine;     // index into RoadNetwork::stopLines()
     };
 
+    // One pass through an intersection box along the route.
+    struct JunctionPass {
+        int junction;     // index into RoadNetwork::intersections()
+        float enter;      // arc length where the centre enters the box
+        float exit;       // ... and leaves it
+        bool turns;       // leaves in a different direction than it came
+    };
+
     SplinePath path;
     std::vector<StopPoint> stops;
+    std::vector<JunctionPass> junctions;
     std::vector<float> stages;   // arc lengths of matatu stages on this route
 };
 
 // Why a vehicle is not driving at its cruise speed (shown in the debug view).
-enum class SpeedLimiter { Free, Corner, Signal, Leader, Stage };
+enum class SpeedLimiter { Free, Corner, Signal, Leader, Stage, Yield };
 
 class TrafficVehicle {
 public:

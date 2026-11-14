@@ -39,9 +39,11 @@ public:
     float phaseDuration(Phase phase) const;
     float timeUntilChange() const;
     float cycleLength() const;
+    float offset() const;             // start offset in seconds
 
 private:
     SignalTiming timing_;
     Phase phase_{Phase::NorthSouthGreen};
     float elapsed_{0.0f};
+    float offset_{0.0f};
 };
