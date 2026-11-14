@@ -1,0 +1,7 @@
+build/
+cmake-build-*/
+out/
+.vs/
+.vscode/
+.idea/
+screenshot-*.png
