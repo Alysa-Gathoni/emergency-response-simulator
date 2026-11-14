@@ -32,8 +32,21 @@ ObjectiveBanner::Lines ObjectiveBanner::text(const BannerData& d) {
     const int type = std::clamp(d.incidentType, 0, 2);
     switch (d.phase) {
         case BannerData::Phase::Arrived:
-            return {"ARRIVED IN " + std::to_string(static_cast<int>(std::lround(d.responseTime))) + " S",
+            return {std::string(d.delivered ? "PATIENT DELIVERED IN " : "ARRIVED IN ")
+                        + std::to_string(static_cast<int>(std::lround(d.responseTime))) + " S",
                     "NEXT CALL COMING UP"};
+        case BannerData::Phase::OnScene:
+            return {std::string(CallNames[type]) + " - ON SCENE",
+                    "CREW AT WORK, STAY STOPPED "
+                        + std::to_string(static_cast<int>(std::lround(std::clamp(d.treatment, 0.0f, 1.0f) * 100.0f)))
+                        + "%"};
+        case BannerData::Phase::Transport: {
+            const std::string headline = "TO HOSPITAL - "
+                + std::to_string(std::max(0, d.metresToGo)) + " M TO GO";
+            if (d.holding) return {headline, "HOLD STILL..."};
+            if (d.nearScene) return {headline, "STOP IN THE HOSPITAL BAY"};
+            return {headline, "PATIENT ON BOARD, FOLLOW THE ROUTE"};
+        }
         case BannerData::Phase::Missed:
             return {"TOO LATE", "NEXT CALL COMING UP"};
         case BannerData::Phase::EnRoute:
@@ -66,6 +79,7 @@ void ObjectiveBanner::draw(IRenderer& target, const LineRenderer& lines,
     Polygon(rect(left, Top, right, bottom)).drawOutline(target, lines, Frame, 1.0f);
 
     Rgba headlineColour = CallColours[std::clamp(d.incidentType, 0, 2)];
+    if (d.phase == BannerData::Phase::Transport) headlineColour = Rgba(90, 170, 255);
     if (d.phase == BannerData::Phase::Arrived) headlineColour = Success;
     if (d.phase == BannerData::Phase::Missed) headlineColour = Failure;
 

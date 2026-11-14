@@ -283,3 +283,12 @@ add_executable(test_pathfinding
 )
 target_include_directories(test_pathfinding PRIVATE src)
 add_test(NAME pathfinding COMMAND test_pathfinding)
+
+add_executable(test_mission
+    tests/test_mission.cpp
+    src/simulation/Mission.cpp
+    src/simulation/EmergencyMarker.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_mission PRIVATE src)
+add_test(NAME mission COMMAND test_mission)
