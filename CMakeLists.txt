@@ -41,7 +41,10 @@ add_executable(EmergencyResponseSimulator
     src/simulation/TrafficSystem.cpp
     src/simulation/VehicleModels.cpp
     src/simulation/VehicleType.cpp
+    src/ui/HelpPanel.cpp
     src/ui/Hud.cpp
+    src/ui/ObjectiveBanner.cpp
+    src/ui/PixelFont.cpp
     src/ui/SevenSegment.cpp
 )
 
@@ -143,3 +146,20 @@ add_executable(test_hud
 target_include_directories(test_hud PRIVATE src)
 target_link_libraries(test_hud sfml-graphics sfml-window sfml-system)
 add_test(NAME hud COMMAND test_hud)
+
+add_executable(test_help_panel
+    tests/test_help_panel.cpp
+    src/ui/HelpPanel.cpp
+    src/ui/ObjectiveBanner.cpp
+    src/ui/PixelFont.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_help_panel PRIVATE src)
+target_link_libraries(test_help_panel sfml-graphics sfml-window sfml-system)
+add_test(NAME help_panel COMMAND test_help_panel)

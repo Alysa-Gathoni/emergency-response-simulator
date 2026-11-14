@@ -29,6 +29,7 @@ bool Game::handleKey(sf::Keyboard::Key key) {
         case sf::Keyboard::T: dayNight_.nextMode(); break;
         case sf::Keyboard::P: paused_ = !paused_; break;
         case sf::Keyboard::R: restart(); break;
+        case sf::Keyboard::H: help_.toggle(); break;
         default: break;
     }
     return true;
@@ -86,6 +87,21 @@ void Game::drawNightLights(sf::RenderTarget& target) const {
     dayNight_.drawLights(target, lines_, lights, graphicsDebug_);
 }
 
+BannerData Game::bannerData() const {
+    BannerData b;
+    switch (mission_.state()) {
+        case Mission::State::Active:  b.phase = BannerData::Phase::EnRoute; break;
+        case Mission::State::Arrived: b.phase = BannerData::Phase::Arrived; break;
+        case Mission::State::Missed:  b.phase = BannerData::Phase::Missed; break;
+    }
+    b.incidentType = static_cast<int>(mission_.type());
+    b.metresToGo = Hud::metres(routeGuide_.remaining());
+    b.nearScene = mission_.distanceRemaining() < Mission::ArrivalRadius * 3.0f;
+    b.holding = mission_.holdProgress() > 0.0f;
+    b.responseTime = mission_.lastResponseTime();
+    return b;
+}
+
 HudData Game::hudData() const {
     HudData h;
     h.incidentType = static_cast<int>(mission_.type());
@@ -136,6 +152,11 @@ void Game::render(sf::RenderTarget& target) const {
         SevenSegment::drawText(target, lines_, "PAUSE", {x, 315}, h,
                                sf::Color(240, 200, 80));
     }
+
+    // Objective and controls last, so they are never covered by the scene.
+    const float bannerLeft = HelpPanel::Left + help_.width() + 12.0f;
+    banner_.draw(target, lines_, bannerData(), bannerLeft);
+    help_.draw(target, lines_);
 }
 
 void Game::saveScreenshot(const sf::RenderWindow& window) {
@@ -165,6 +186,11 @@ int Game::run() {
                 if (event.key.code == sf::Keyboard::F12) saveScreenshot(window);
                 else if (!handleKey(event.key.code)) window.close();
             }
+            if (event.type == sf::Event::MouseButtonPressed
+                && event.mouseButton.button == sf::Mouse::Left
+                && help_.headerContains({static_cast<float>(event.mouseButton.x),
+                                         static_cast<float>(event.mouseButton.y)}))
+                help_.toggle();
         }
 
         accumulator += std::min(clock.restart().asSeconds(), MaxFrameTime);
@@ -173,6 +199,13 @@ int Game::run() {
         // state is global, so other applications would steer otherwise).
         const DrivingInput input = window.hasFocus() ? Ambulance::readKeyboard()
                                                      : DrivingInput{};
+        // The panel is open on start; the first press of the accelerator
+        // folds it away (H brings it back), the banner keeps the goal shown.
+        if (!helpAutoHidden_ && input.throttle > 0.0f) {
+            help_.setExpanded(false);
+            helpAutoHidden_ = true;
+        }
+
         while (accumulator >= FixedStep) {
             if (!paused_) step(FixedStep, input);
             accumulator -= FixedStep;
@@ -185,6 +218,9 @@ int Game::run() {
 }
 
 int Game::renderScreenshot(const std::string& path, float seconds, const std::string& keys) {
+    // Evidence shots show the scene with the controls panel minimised;
+    // an 'H' in `keys` opens it again.
+    help_.setExpanded(false);
     for (char k : keys) {
         const char upper = static_cast<char>(std::toupper(static_cast<unsigned char>(k)));
         if (upper >= 'A' && upper <= 'Z')
