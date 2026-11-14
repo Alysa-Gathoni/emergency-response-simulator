@@ -40,6 +40,8 @@ add_executable(EmergencyResponseSimulator
     src/simulation/TrafficSystem.cpp
     src/simulation/VehicleModels.cpp
     src/simulation/VehicleType.cpp
+    src/ui/Hud.cpp
+    src/ui/SevenSegment.cpp
 )
 
 target_include_directories(EmergencyResponseSimulator PRIVATE src)
@@ -52,7 +54,8 @@ target_link_libraries(EmergencyResponseSimulator
 
 # ---------------------------------------------------------------------------
 # Unit tests: plain executables using tests/Check.h, run with `ctest`.
-# They only link the pure C++ modules, so they need no window or SFML.
+# Most link only the pure C++ modules; tests of code that draws (driving,
+# route guidance, HUD) also link SFML for the shared rasterizer.
 # ---------------------------------------------------------------------------
 enable_testing()
 
@@ -123,3 +126,19 @@ add_executable(test_route
 target_include_directories(test_route PRIVATE src)
 target_link_libraries(test_route sfml-graphics sfml-window sfml-system)
 add_test(NAME route COMMAND test_route)
+
+add_executable(test_hud
+    tests/test_hud.cpp
+    src/ui/Hud.cpp
+    src/ui/SevenSegment.cpp
+    src/core/Mat3.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_hud PRIVATE src)
+target_link_libraries(test_hud sfml-graphics sfml-window sfml-system)
+add_test(NAME hud COMMAND test_hud)
