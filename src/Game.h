@@ -16,6 +16,7 @@
 #include "simulation/Ambulance.h"
 #include "simulation/ClippingDemo.h"
 #include "simulation/CollisionSystem.h"
+#include "simulation/DemoDriver.h"
 #include "simulation/Mission.h"
 #include "simulation/RouteGuide.h"
 #include "simulation/Scoring.h"
@@ -46,6 +47,9 @@ public:
     // Headless evidence capture: simulate `seconds` at the fixed step,
     // apply the toggle keys in `keys` (e.g. "GT", "O" for the software
     // renderer) first, render one frame off-screen and save it as a PNG.
+    // '!' in `keys` lets the demo driver follow the route, so a whole call
+    // (drive, treat, hospital, result screen) can be captured; '@' shows
+    // the title menu.
     int renderScreenshot(const std::string& path, float seconds, const std::string& keys);
 
 private:
@@ -97,6 +101,10 @@ private:
     bool callStarted_{false};
     bool helpAutoHidden_{false};   // panel folds away once, on first drive
     int screenshotCount_{0};
+    DemoDriver demoDriver_;
+    bool demoDriving_{false};
+
+    DrivingInput demoInput(float deltaTime);
 
     // Returns false when the key asks to quit.
     bool handleKey(sf::Keyboard::Key key);

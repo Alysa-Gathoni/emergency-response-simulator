@@ -416,6 +416,15 @@ int Game::run() {
     return 0;
 }
 
+DrivingInput Game::demoInput(float dt) {
+    if (!mission_.driving()) return DrivingInput{};
+    std::vector<Point> nearby;
+    for (const auto& v : traffic_.vehicles()) nearby.push_back(v.position());
+    for (const auto& f : pedestrians_.footprints())
+        if (!f.empty()) nearby.push_back(f.front());
+    return demoDriver_.drive(ambulance_, routeGuide_.route(), nearby, true, dt);
+}
+
 int Game::renderScreenshot(const std::string& path, float seconds, const std::string& keys) {
     // Evidence shots show the scene with the controls panel minimised;
     // an 'H' in `keys` opens it again.
@@ -423,6 +432,7 @@ int Game::renderScreenshot(const std::string& path, float seconds, const std::st
     screen_ = Screen::Playing;
     for (char k : keys) {
         if (k == '@') { screen_ = Screen::Title; continue; }   // menu screenshot
+        if (k == '!') { demoDriving_ = true; continue; }       // autopilot
         const char upper = static_cast<char>(std::toupper(static_cast<unsigned char>(k)));
         if (upper >= 'A' && upper <= 'Z')
             handleKey(static_cast<sf::Keyboard::Key>(sf::Keyboard::A + (upper - 'A')));
@@ -430,7 +440,8 @@ int Game::renderScreenshot(const std::string& path, float seconds, const std::st
 
     const int steps = static_cast<int>(seconds / FixedStep);
     for (int i = 0; i < steps; ++i) {
-        if (screen_ == Screen::Playing) step(FixedStep, DrivingInput{});
+        if (screen_ == Screen::Playing)
+            step(FixedStep, demoDriving_ ? demoInput(FixedStep) : DrivingInput{});
         else stepWorld(FixedStep);
     }
 
