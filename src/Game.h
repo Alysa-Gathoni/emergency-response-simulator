@@ -16,6 +16,7 @@
 #include "simulation/Ambulance.h"
 #include "simulation/ClippingDemo.h"
 #include "simulation/CollisionSystem.h"
+#include "simulation/Congestion.h"
 #include "simulation/DemoDriver.h"
 #include "simulation/Mission.h"
 #include "simulation/RouteGuide.h"
@@ -68,6 +69,8 @@ private:
     Mission mission_{graph_.incidentSpots(), startPosition_};
     RouteGuide routeGuide_{graph_};
     TrafficSystem traffic_{network_};
+    Congestion congestion_{graph_};
+    bool sirenMuted_{false};
     RedLightCamera redLightCamera_{network_, trafficLights_};
     CollisionSystem collisions_;
     Hud hud_;
@@ -113,6 +116,8 @@ private:
     void startShift();
     void step(float deltaTime, const DrivingInput& input);
     void stepWorld(float deltaTime);
+    void updateTraffic(float deltaTime, bool siren);
+    bool sirenOn() const;
     void trackMission();
     IRenderer& renderer(sf::RenderTarget& target);
     void render(IRenderer& target);

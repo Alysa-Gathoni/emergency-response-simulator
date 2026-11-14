@@ -61,8 +61,14 @@ DrivingInput DemoDriver::drive(const Ambulance& ambulance, const std::vector<Poi
     const float lookahead = 45.0f + std::abs(speed) * 0.35f;
     Point dir;
     Point aim = along(route, std::min(lookahead, total), &dir);
-    if (total - lookahead > 60.0f) aim = RoadNetwork::laneCentre(aim, dir);
-    else aim = end;
+    // With the siren on it drives near the centre line, past the vehicles
+    // that pulled over to the kerb.
+    if (total - lookahead > 60.0f) {
+        const Point lane = RoadNetwork::laneCentre(aim, dir);
+        aim = {aim.x + (lane.x - aim.x) * 0.6f, aim.y + (lane.y - aim.y) * 0.6f};
+    } else {
+        aim = end;
+    }
     const float error = wrap(std::atan2(aim.y - p.y, aim.x - p.x) - heading);
     in.steer = std::clamp(error * 2.6f, -1.0f, 1.0f);
 
@@ -90,7 +96,7 @@ DrivingInput DemoDriver::drive(const Ambulance& ambulance, const std::vector<Poi
         const Point d{o.x - p.x, o.y - p.y};
         const float front = d.x * fwd.x + d.y * fwd.y;
         const float side = std::abs(d.x * -fwd.y + d.y * fwd.x);
-        if (front > 20.0f && front < 55.0f + std::abs(speed) * 0.45f && side < 22.0f) blocked = true;
+        if (front > 20.0f && front < 55.0f + std::abs(speed) * 0.45f && side < 18.0f) blocked = true;
     }
     waited_ = blocked ? waited_ + deltaTime : 0.0f;
     if (blocked && waited_ < 3.0f) target = 0.0f;

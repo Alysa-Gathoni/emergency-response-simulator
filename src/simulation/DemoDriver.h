@@ -8,7 +8,8 @@
 // DrivingInput as the keyboard, so it exercises the real driving model.
 //
 // Pure pursuit: aim at the point `lookahead` pixels further along the
-// route, shifted into the left-hand lane; steer by the heading error.
+// route, shifted into the left-hand lane (near the centre line, as an
+// ambulance on a call drives); steer by the heading error.
 // Speed: v = sqrt(2 * b * d) to stop on the target, a turn limit when the
 // route bends within the next stretch, and a brake for anything in front.
 // A target it overshot is reached by reversing; turning round in a

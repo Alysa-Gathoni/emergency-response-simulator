@@ -114,6 +114,16 @@ void TrafficSystem::buildRoutes() {
         routes_.push_back(makeRoute(waypoints));
 }
 
+void TrafficSystem::keepClear(Point p, float radius) {
+    keepClear_.push_back({p, radius});
+}
+
+int TrafficSystem::yieldingCount() const {
+    int n = 0;
+    for (const auto& v : vehicles_) n += v.pullingOver() ? 1 : 0;
+    return n;
+}
+
 void TrafficSystem::reset() {
     vehicles_.clear();
     spawn(vehicleCountFor(density_, static_cast<int>(network_.intersections().size())), seed_);
@@ -127,6 +137,8 @@ void TrafficSystem::spawn(int count, unsigned seed) {
     // Rejection sampling: retry positions that would overlap another
     // vehicle or start inside a junction box.
     auto clear = [&](Point p) {
+        for (const auto& [centre, radius] : keepClear_)
+            if (std::hypot(p.x - centre.x, p.y - centre.y) < radius) return false;
         for (const auto& v : vehicles_) {
             const Point q = v.position();
             if (std::hypot(p.x - q.x, p.y - q.y) < 75.0f) return false;
@@ -386,6 +398,55 @@ void TrafficSystem::plan(const TrafficLights& lights,
                 blocking = hit.nearest;
             }
         }
+
+        // 7. Siren: make way for the ambulance.
+        bool pullOver = false;
+        if (emergency_.siren) {
+            const Point e = emergency_.position;
+            const Point ed = emergency_.direction;
+            const Point rel{pos.x - e.x, pos.y - e.y};
+            const float along = rel.x * ed.x + rel.y * ed.y;          // ahead of the ambulance
+            const float side = std::abs(rel.x * -ed.y + rel.y * ed.x);
+            const float facing = dir.x * ed.x + dir.y * ed.y;
+            const bool onItsRoad = side < RoadNetwork::HalfWidth + 10.0f;
+
+            if (onItsRoad && along > -20.0f && along < SirenReach && facing > 0.7f) {
+                // Same direction, in front: pull over and crawl.
+                pullOver = true;
+                if (SirenCrawl < target) {
+                    target = SirenCrawl;
+                    reason = SpeedLimiter::Siren;
+                    blocking = e;
+                }
+            } else if (onItsRoad && along > 0.0f && along < SirenReach && facing < -0.7f) {
+                // Oncoming: slow down and keep left.
+                pullOver = true;
+                if (v.cruiseSpeed() * 0.5f < target) {
+                    target = v.cruiseSpeed() * 0.5f;
+                    reason = SpeedLimiter::Siren;
+                    blocking = e;
+                }
+            }
+
+            // Crossing traffic holds before a junction the ambulance is about
+            // to use (or is inside).
+            const BoxState& box = boxes[i];
+            if (!pullOver && box.junction >= 0 && !box.inside && box.toEnter < Lookahead) {
+                const Point c = network_.intersections()[static_cast<std::size_t>(box.junction)].centre;
+                const Point toBox{c.x - e.x, c.y - e.y};
+                const float ahead = toBox.x * ed.x + toBox.y * ed.y;
+                const float dist = std::hypot(toBox.x, toBox.y);
+                if (dist < 60.0f || (ahead > -40.0f && dist < 240.0f && std::abs(facing) < 0.7f)) {
+                    const float limit = TrafficRules::stoppingSpeed(std::max(0.0f, box.toEnter - 2.0f), b);
+                    if (limit < target) {
+                        target = limit;
+                        reason = SpeedLimiter::Siren;
+                        blocking = c;
+                    }
+                }
+            }
+        }
+        v.setPullOver(pullOver);
 
         v.setTarget(std::min(target, v.cruiseSpeed()), reason, blocking);
     }

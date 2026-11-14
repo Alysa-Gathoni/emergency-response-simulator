@@ -38,6 +38,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/ClippingDemo.cpp
     src/simulation/Collision.cpp
     src/simulation/CollisionSystem.cpp
+    src/simulation/Congestion.cpp
     src/simulation/DemoDriver.cpp
     src/simulation/EmergencyMarker.cpp
     src/simulation/Mission.cpp
@@ -333,3 +334,20 @@ add_executable(test_full_call
 )
 target_include_directories(test_full_call PRIVATE src)
 add_test(NAME full_call COMMAND test_full_call)
+
+add_executable(test_congestion
+    tests/test_congestion.cpp
+    src/simulation/Congestion.cpp
+    src/simulation/Pathfinding.cpp
+    src/city/RoadGraph.cpp
+    src/city/RoadNetwork.cpp
+    src/core/Mat3.cpp
+    src/curves/Bezier.cpp
+    src/curves/CatmullRom.cpp
+    src/curves/Spline.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/rasterization/Clipping.cpp
+)
+target_include_directories(test_congestion PRIVATE src)
+add_test(NAME congestion COMMAND test_congestion)

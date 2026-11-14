@@ -8,7 +8,7 @@
 // Shortest route along the roads from the ambulance to the incident.
 //
 // Search graph = the RoadGraph (junctions and map-edge points, edges
-// weighted by length) plus two extra nodes where the ambulance and the
+// weighted by length times the live congestion factor) plus two extra nodes where the ambulance and the
 // target join their nearest road section. A* with the straight-line
 // heuristic finds the route; it is re-planned every frame, so it follows
 // the ambulance if the driver takes a different turn.
@@ -32,6 +32,9 @@ public:
     void draw(IRenderer& target, const LineRenderer& lines,
               Rgba colour, bool debug) const;
 
+    // Per-edge weight factors (congestion), >= 1; null = plain lengths.
+    void setEdgeFactors(const std::vector<float>* factors) { factors_ = factors; }
+
     // Comparison overlay (V): world-space markers and the screen panel.
     void setCompare(bool on) { compare_ = on; }
     bool comparing() const { return compare_; }
@@ -51,6 +54,7 @@ private:
     bool active_{false};
 
     bool compare_{false};
+    const std::vector<float>* factors_{nullptr};
     SearchGraph search_;
     PathResult dijkstra_;
     PathResult aStar_;

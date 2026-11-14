@@ -99,7 +99,52 @@ void soakWithoutOverlaps(const RoadNetwork& network, TrafficDensity density,
 
 }
 
+void vehiclesMakeWayForTheSiren() {
+    const RoadNetwork network = small();
+    TrafficLights lights(network);
+    TrafficSystem traffic(network, TrafficDensity::Low);
+
+    // Put the ambulance 120 px behind the first vehicle, same direction.
+    const TrafficVehicle& v = traffic.vehicles().front();
+    const Point d = v.direction();
+    const Point behind{v.position().x - d.x * 120.0f, v.position().y - d.y * 120.0f};
+    EmergencyVehicle e{true, behind, d, 100.0f};
+    for (int i = 0; i < 90; ++i) {
+        // Keep the ambulance 120 px behind as the vehicle crawls on.
+        const TrafficVehicle& now = traffic.vehicles().front();
+        e.position = {now.position().x - now.direction().x * 120.0f,
+                      now.position().y - now.direction().y * 120.0f};
+        e.direction = now.direction();
+        traffic.setEmergency(e);
+        traffic.update(1.0f / 60.0f, lights, {});
+    }
+    const TrafficVehicle& after = traffic.vehicles().front();
+    CHECK(after.pullingOver());
+    CHECK(after.lateralOffset() > 10.0f);
+    CHECK(after.speed() <= TrafficSystem::SirenCrawl + 0.5f);
+    CHECK(traffic.yieldingCount() >= 1);
+
+    // Siren off: back into the lane.
+    e.siren = false;
+    traffic.setEmergency(e);
+    for (int i = 0; i < 90; ++i) traffic.update(1.0f / 60.0f, lights, {});
+    CHECK(!traffic.vehicles().front().pullingOver());
+    CHECK(traffic.vehicles().front().lateralOffset() == 0.0f);
+}
+
+void keepClearAreaStaysEmpty() {
+    const RoadNetwork network = small();
+    TrafficSystem traffic(network, TrafficDensity::High);
+    const Point start{420.0f, 165.0f};
+    traffic.keepClear(start, 140.0f);
+    traffic.reset();
+    for (const auto& v : traffic.vehicles())
+        CHECK(std::hypot(v.position().x - start.x, v.position().y - start.y) >= 140.0f);
+}
+
 int main() {
+    vehiclesMakeWayForTheSiren();
+    keepClearAreaStaysEmpty();
     densityScalesWithTheGrid();
     routesComeFromTheGrid();
     signalOffsetsFollowTheGrid();

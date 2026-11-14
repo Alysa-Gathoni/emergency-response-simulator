@@ -26,6 +26,7 @@ Rgba limiterColor(SpeedLimiter reason) {
         case SpeedLimiter::Leader: return Rgba(240, 170, 60);
         case SpeedLimiter::Stage:  return Rgba(220, 90, 200);
         case SpeedLimiter::Yield:  return Rgba(250, 250, 250);
+        case SpeedLimiter::Siren:  return Rgba(90, 170, 255);
     }
     return Rgba::White;
 }
@@ -52,6 +53,9 @@ void TrafficVehicle::setTarget(float targetSpeed, SpeedLimiter reason,
 
 void TrafficVehicle::integrate(float deltaTime) {
     age_ += deltaTime;
+    const float wanted = pullOver_ ? PullOverOffset : 0.0f;
+    const float step = PullOverRate * deltaTime;
+    lateral_ = lateral_ < wanted ? std::min(wanted, lateral_ + step) : std::max(wanted, lateral_ - step);
     if (dwell_ > 0.0f) {
         // Passengers boarding at a matatu stage.
         dwell_ -= deltaTime;
@@ -112,7 +116,11 @@ float TrafficVehicle::halfLength() const { return spec_->halfLength; }
 float TrafficVehicle::halfWidth() const { return spec_->halfWidth; }
 
 Point TrafficVehicle::position() const {
-    return route_->path.pointAtDistance(distance_);
+    const Point p = route_->path.pointAtDistance(distance_);
+    if (lateral_ <= 0.0f) return p;
+    // leftOf(d) = (d.y, -d.x) in screen coordinates: towards the kerb.
+    const Point d = route_->path.directionAtDistance(distance_);
+    return {p.x + d.y * lateral_, p.y - d.x * lateral_};
 }
 
 Point TrafficVehicle::direction() const {
