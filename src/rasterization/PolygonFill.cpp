@@ -1,10 +1,40 @@
 #include "PolygonFill.h"
 #include "Clipping.h"
 #include "../core/Raster.h"
+#include "../polygons/Triangulation.h"
 #include <algorithm>
 #include <cmath>
 
 namespace PolygonFill {
+
+namespace {
+FillMode currentMode = FillMode::ScanLine;
+
+void removeEmpty(std::vector<std::pair<Point, Point>>& spans) {
+    // Spans whose rounded ends cross (slivers thinner than a pixel) are empty.
+    spans.erase(std::remove_if(spans.begin(), spans.end(),
+                               [](const auto& s) { return s.second.x < s.first.x; }),
+                spans.end());
+}
+
+Rgba darker(Rgba c) {
+    return Rgba(c.r * 3 / 5, c.g * 3 / 5, c.b * 3 / 5, c.a);
+}
+}
+
+void setMode(FillMode mode) { currentMode = mode; }
+
+void nextMode() {
+    currentMode = currentMode == FillMode::ScanLine ? FillMode::Triangles
+                : currentMode == FillMode::Triangles ? FillMode::Native
+                : FillMode::ScanLine;
+}
+
+FillMode mode() { return currentMode; }
+
+const char* modeName(FillMode m) {
+    return m == FillMode::ScanLine ? "SCAN" : m == FillMode::Triangles ? "EAR" : "TRI";
+}
 
 std::vector<std::pair<Point, Point>>
 scanLineSpans(const std::vector<Point>& vertices) {
@@ -87,12 +117,32 @@ void draw(IRenderer& target,
         }
     }
 
-    auto spans = scanLineSpans(*shape);
+    if (currentMode == FillMode::Native) {
+        // The graphics API rasterises the ear-clipped triangles itself.
+        const std::vector<Point> tris = Triangulation::triangles(*shape);
+        if (!tris.empty()) target.drawNativeTriangles(tris, color);
+        return;
+    }
 
-    // Spans whose rounded ends cross (slivers thinner than a pixel) are empty.
-    spans.erase(std::remove_if(spans.begin(), spans.end(),
-                               [](const auto& s) { return s.second.x < s.first.x; }),
-                spans.end());
+    if (currentMode == FillMode::Triangles && shape->size() > 3) {
+        // Each ear-clipped triangle filled by our scan-line fill, edges on top.
+        const std::vector<Point> tris = Triangulation::triangles(*shape);
+        std::vector<std::pair<Point, Point>> all;
+        for (std::size_t t = 0; t + 2 < tris.size(); t += 3) {
+            auto part = scanLineSpans({tris[t], tris[t + 1], tris[t + 2]});
+            all.insert(all.end(), part.begin(), part.end());
+        }
+        removeEmpty(all);
+        Raster::spans(target, all, color);
+        const Rgba edge = darker(color);
+        for (std::size_t t = 0; t + 2 < tris.size(); t += 3)
+            for (int k = 0; k < 3; ++k)
+                renderer.draw(target, tris[t + k], tris[t + (k + 1) % 3], edge, 1.0f);
+        return;
+    }
+
+    auto spans = scanLineSpans(*shape);
+    removeEmpty(spans);
 
     if (!debug) {
         Raster::spans(target, spans, color);

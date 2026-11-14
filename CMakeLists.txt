@@ -15,6 +15,7 @@ add_executable(EmergencyResponseSimulator
     src/lines/LineAlgorithms.cpp
     src/lines/LineRenderer.cpp
     src/polygons/Transformations.cpp
+    src/polygons/Triangulation.cpp
     src/polygons/Polygon.cpp
     src/rasterization/PolygonFill.cpp
     src/rasterization/Clipping.cpp
@@ -108,6 +109,7 @@ add_executable(test_driving
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_driving PRIVATE src)
@@ -134,6 +136,7 @@ add_executable(test_route
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_route PRIVATE src)
@@ -150,6 +153,7 @@ add_executable(test_hud
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_hud PRIVATE src)
@@ -167,6 +171,7 @@ add_executable(test_help_panel
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_help_panel PRIVATE src)
@@ -190,6 +195,7 @@ add_executable(test_render_paths
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_render_paths PRIVATE src)
@@ -215,6 +221,7 @@ add_executable(test_traffic_system
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_traffic_system PRIVATE src)
@@ -228,6 +235,7 @@ add_executable(test_camera
     src/lines/LineRenderer.cpp
     src/rasterization/Clipping.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
 )
 target_include_directories(test_camera PRIVATE src)
 add_test(NAME camera COMMAND test_camera)
@@ -247,7 +255,15 @@ add_executable(test_road_graph
     src/polygons/Polygon.cpp
     src/polygons/Transformations.cpp
     src/rasterization/PolygonFill.cpp
+    src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
 )
 target_include_directories(test_road_graph PRIVATE src)
 add_test(NAME road_graph COMMAND test_road_graph)
+
+add_executable(test_ear_clipping
+    tests/test_ear_clipping.cpp
+    src/polygons/Triangulation.cpp
+)
+target_include_directories(test_ear_clipping PRIVATE src)
+add_test(NAME ear_clipping COMMAND test_ear_clipping)
