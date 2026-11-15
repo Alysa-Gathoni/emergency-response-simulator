@@ -41,6 +41,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/Congestion.cpp
     src/simulation/DemoDriver.cpp
     src/simulation/EmergencyMarker.cpp
+    src/simulation/HighScores.cpp
     src/simulation/Mission.cpp
     src/simulation/Pathfinding.cpp
     src/simulation/RouteGuide.cpp
@@ -378,3 +379,10 @@ add_executable(test_minimap
 )
 target_include_directories(test_minimap PRIVATE src)
 add_test(NAME minimap COMMAND test_minimap)
+
+add_executable(test_high_scores
+    tests/test_high_scores.cpp
+    src/simulation/HighScores.cpp
+)
+target_include_directories(test_high_scores PRIVATE src)
+add_test(NAME high_scores COMMAND test_high_scores)

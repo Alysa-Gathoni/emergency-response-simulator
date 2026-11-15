@@ -54,6 +54,10 @@ public:
     // Starts again from the first call (R key).
     void restart(Point ambulancePosition);
 
+    // Difficulty: every time limit (scene and hospital) is multiplied by
+    // `scale`; takes effect from the next call.
+    void setTimeScale(float scale) { timeScale_ = scale; }
+
     State state() const;
     bool driving() const;             // EnRoute or Transport: a route is shown
     bool finished() const;            // Completed or Missed (pause before the next call)
@@ -95,6 +99,7 @@ private:
     int completed_{0};
     int missed_{0};
     float lastResponse_{0.0f};
+    float timeScale_{1.0f};
 
     void nextIncident(Point ambulancePosition);
     void complete();

@@ -35,6 +35,9 @@ ScoreBreakdown score(const MissionReport& r) {
     s.total = std::max(0, s.base + s.timeBonus - s.collisionPenalty - s.redLightPenalty
                               - s.wrongTurnPenalty);
     s.grade = grade(s.total, s.base);
+    const int scaled = static_cast<int>(std::lround(s.total * std::max(0.0f, r.multiplier)));
+    s.difficultyBonus = scaled - s.total;
+    s.total = scaled;
     return s;
 }
 

@@ -33,6 +33,22 @@ void wrongTurnsAndNewCalls() {
     CHECK(incidentInfo(IncidentType::Maternity).needsHospital);
 }
 
+void difficultyMultiplier() {
+    MissionReport r;
+    r.arrived = true;
+    r.incidentType = 0;           // base 500
+    r.routeLength = 0.0f;
+    r.elapsed = 100.0f;           // no time bonus
+    r.multiplier = 1.25f;
+    const auto s = Scoring::score(r);
+    CHECK(s.total == 625);
+    CHECK(s.difficultyBonus == 125);
+    CHECK(s.grade == 'B');        // graded before the multiplier
+    r.multiplier = 0.8f;
+    CHECK(Scoring::score(r).total == 400);
+    CHECK(Scoring::score(r).difficultyBonus == -100);
+}
+
 void twoLegsGetTwoStops() {
     // Scene + hospital: both routes summed, a stop allowance for each stop.
     CHECK_NEAR(Scoring::parTime(900.0f, 2), 900.0f / Scoring::ParSpeed + 2 * Scoring::StopAllowance, 1e-4f);
@@ -111,6 +127,7 @@ void grades() {
 }
 
 int main() {
+    difficultyMultiplier();
     wrongTurnsAndNewCalls();
     twoLegsGetTwoStops();
     parTimeFollowsRouteLength();
