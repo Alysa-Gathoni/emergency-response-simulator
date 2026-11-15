@@ -86,6 +86,7 @@ bool Game::handleKey(sf::Keyboard::Key key) {
         case sf::Keyboard::B: curveDebug_ = !curveDebug_; break;
         case sf::Keyboard::V: routeGuide_.setCompare(!routeGuide_.comparing()); break;
         case sf::Keyboard::E: sirenMuted_ = !sirenMuted_; break;
+        case sf::Keyboard::M: minimap_.toggle(); break;
         case sf::Keyboard::T: dayNight_.nextMode(); break;
         case sf::Keyboard::P: paused_ = !paused_; break;
         case sf::Keyboard::R: restart(); break;
@@ -275,6 +276,20 @@ HudData Game::hudData() const {
     return h;
 }
 
+Minimap::Frame Game::minimapFrame() const {
+    Minimap::Frame f;
+    f.ambulance = ambulance_.position();
+    f.headingDegrees = ambulance_.heading();
+    if (mission_.driving()) f.route = routeGuide_.route();
+    f.routeColour = mission_.colour();
+    f.showTarget = !mission_.finished();
+    f.target = mission_.target();
+    for (const auto& v : traffic_.vehicles()) f.traffic.push_back(v.position());
+    f.cameraView = camera_.visible();
+    f.time = mission_.elapsed();
+    return f;
+}
+
 IRenderer& Game::renderer(sf::RenderTarget& target) {
     software_.setTarget(target);
     gl_.setTarget(target);
@@ -359,6 +374,7 @@ void Game::render(IRenderer& target) {
         case Screen::Result:
         case Screen::GameOver: {
             hud_.draw(target, lines_, hudData());
+            if (screen_ == Screen::Playing) minimap_.draw(target, lines_, minimapFrame());
             // Objective and controls last, so they are never covered by the scene.
             const float bannerLeft = HelpPanel::Left + help_.width() + 12.0f;
             if (screen_ == Screen::Playing) {

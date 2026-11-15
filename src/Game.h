@@ -25,6 +25,7 @@
 #include "simulation/SkidMarks.h"
 #include "simulation/TrafficSystem.h"
 #include "ui/HelpPanel.h"
+#include "ui/Minimap.h"
 #include "ui/Hud.h"
 #include "ui/ObjectiveBanner.h"
 #include "ui/Screens.h"
@@ -79,6 +80,8 @@ private:
     Hud hud_;
     HelpPanel help_;
     ObjectiveBanner banner_;
+    Minimap minimap_{city_, {Screens::Width - Minimap::Width - 12.0f, Screens::Height - Minimap::Height - 12.0f,
+                             Screens::Width - 12.0f, Screens::Height - 12.0f}};
 
     // Both backends draw the same scene; O switches between them.
     SoftwareRenderer software_;
@@ -126,6 +129,7 @@ private:
     void render(IRenderer& target);
     void drawNightLights(IRenderer& target, const ClipRect& visible) const;
     HudData hudData() const;
+    Minimap::Frame minimapFrame() const;
     BannerData bannerData() const;
     void saveScreenshot(const sf::RenderWindow& window);
 };
