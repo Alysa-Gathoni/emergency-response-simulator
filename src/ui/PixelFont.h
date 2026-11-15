@@ -40,4 +40,8 @@ std::vector<std::pair<Point, Point>> spans(const std::string& text,
 void drawText(IRenderer& target, const std::string& text,
               Point origin, int scale, Rgba colour);
 
+// Every lit pixel (top-left corners of 1 x 1 squares), for text that is
+// transformed (e.g. rotated) before it is drawn.
+std::vector<Point> pixels(const std::string& text, Point origin, int scale);
+
 }

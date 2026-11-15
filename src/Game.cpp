@@ -307,6 +307,7 @@ void Game::render(IRenderer& target) {
     const ClipRect clip = clippingDebug_ ? camera_.visible(ClippingDemo::Inset) : visible;
     target.setView(camera_.view());
     lines_.setClip(clip);
+    target.setPixelClip(&clip);
 
     // The city never moves: with OpenGL it is recorded once into a display
     // list (whole map, no clipping) and replayed every frame; the key makes
@@ -318,10 +319,12 @@ void Game::render(IRenderer& target) {
     if (target.cachesStatic() && !clippingDebug_) {
         if (target.beginStatic(staticKey)) {
             lines_.clearClip();
+            target.setPixelClip(nullptr);
             city_.draw(target, lines_, graphicsDebug_);
             environment_.draw(target, graphicsDebug_);
             target.endStatic();
             lines_.setClip(clip);
+            target.setPixelClip(&clip);
         }
     } else {
         city_.draw(target, lines_, graphicsDebug_);
@@ -338,9 +341,11 @@ void Game::render(IRenderer& target) {
     // Night: tint the finished scene (screen space), then lights on top.
     target.setView(Mat3::identity());
     lines_.clearClip();
+    target.setPixelClip(nullptr);
     dayNight_.drawOverlay(target, lines_, Screens::Width, Screens::Height);
     target.setView(camera_.view());
     lines_.setClip(clip);
+    target.setPixelClip(&clip);
     drawNightLights(target, clip);
     SirenGlow::draw(target, ambulance_, dayNight_.darkness());
 
@@ -351,6 +356,7 @@ void Game::render(IRenderer& target) {
     mission_.draw(target, lines_, graphicsDebug_);
 
     lines_.clearClip();
+    target.setPixelClip(nullptr);
     clippingDemo_.draw(target, lines_, clippingDebug_, clip);
 
     // Screen pass: HUD, menus and panels. The ear-clipping view would

@@ -1,6 +1,7 @@
 #include "Check.h"
 #include "city/City.h"
 #include "city/RoadGraph.h"
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -84,7 +85,34 @@ void cityIsBuiltFromTheBlocks() {
 
 }
 
+void namesAndArrowsAreOnTheRoads() {
+    RoadNetwork network;
+    City city(network);
+    const auto labels = city.roadLabels();
+    CHECK(labels.size() >= 7);                       // at least one per road
+    for (const auto& label : labels) {
+        CHECK(!label.text.empty());
+        // On a road surface, never on a block.
+        bool onRoad = false;
+        for (const Road& r : network.roads()) {
+            const float across = r.vertical ? label.centre.x - r.centre : label.centre.y - r.centre;
+            onRoad = onRoad || std::abs(across) < RoadNetwork::HalfWidth;
+        }
+        CHECK(onRoad);
+        CHECK(label.degrees == 0.0f || label.degrees == -90.0f);
+    }
+
+    // The arrow outline is concave (one notch each side of the head) and
+    // points along +x.
+    const auto arrow = City::laneArrow();
+    CHECK(arrow.size() == 7);
+    float maxX = -1e9f;
+    for (const Point& p : arrow) maxX = std::max(maxX, p.x);
+    CHECK(maxX == 16.0f);
+}
+
 int main() {
+    namesAndArrowsAreOnTheRoads();
     graphOfTheDistrict();
     nearestPointOnTheRoads();
     incidentSpotsAreInLanes();

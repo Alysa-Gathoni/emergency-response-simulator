@@ -4,6 +4,7 @@
 #include "../core/Mat3.h"
 #include "../core/Point.h"
 #include "../core/Rgba.h"
+#include "../rasterization/Clipping.h"
 
 // The only interface the scene uses to put anything on screen.
 //
@@ -56,6 +57,15 @@ public:
     bool hasModel() const { return !stack_.empty(); }
     Mat3 model() const { return view_.inverse() * current(); }
 
+    // Clip window for single pixels and text spans (world coordinates);
+    // null = no clipping. Lines and polygons are clipped by LineRenderer
+    // and PolygonFill before they get here.
+    void setPixelClip(const ClipRect* rect) {
+        hasPixelClip_ = rect != nullptr;
+        if (rect) pixelClip_ = *rect;
+    }
+    const ClipRect* pixelClip() const { return hasPixelClip_ ? &pixelClip_ : nullptr; }
+
     // Square pixels of side `size` produced by our algorithms.
     virtual void drawPixels(const std::vector<Point>& pixels, Rgba colour, float size) = 0;
 
@@ -83,4 +93,6 @@ protected:
 private:
     Mat3 view_ = Mat3::identity();
     std::vector<Mat3> stack_;
+    ClipRect pixelClip_{};
+    bool hasPixelClip_{false};
 };
