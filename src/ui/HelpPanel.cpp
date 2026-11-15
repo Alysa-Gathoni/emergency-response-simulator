@@ -28,9 +28,9 @@ const std::string LeftArrow(1, PixelFont::ArrowLeft);
 const std::string RightArrow(1, PixelFont::ArrowRight);
 
 const std::vector<std::string> GoalLines = {
-    "GOAL: REACH THE FLASHING",
-    "INCIDENT AND STOP ON IT",
-    "BEFORE THE TIMER RUNS OUT.",
+    "GOAL: STOP AT THE CALL IN",
+    "TIME, LET THE CREW WORK,",
+    "THEN DRIVE TO HOSPITAL.",
 };
 
 struct Row { std::string key; std::string action; };
@@ -50,7 +50,7 @@ const std::vector<Row> Rows = {
     {"V",                                  "DIJKSTRA VS A-STAR"},
     {"M",                                  "MINIMAP"},
     {"L",                                  "LINE ALGORITHM"},
-    {"F",                                  "FILL: SCAN / EAR / API"},
+    {"F",                                  "POLYGON FILL MODE"},
     {"O",                                  "OPENGL / SOFTWARE"},
     {"F12",                                "SCREENSHOT"},
     {"ESC",                                "PAUSE / MENU"},

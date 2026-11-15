@@ -1,5 +1,7 @@
 #include "GLRenderer.h"
 #include <SFML/OpenGL.hpp>
+#include <cmath>
+#include "../core/Letterbox.h"
 
 void GLRenderer::toGlMatrix(const Mat3& m, float out[16]) {
     // | a b 0 tx |
@@ -29,10 +31,28 @@ void GLRenderer::beginFrame(Rgba clear) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // Letterbox: black bars first over the whole window, then the
+    // viewport (and a scissor box, so nothing leaks into the bars) on the
+    // fitted area. glViewport counts y from the bottom of the window.
+    const float lw = logicalWidth(static_cast<float>(size.x));
+    const float lh = logicalHeight(static_cast<float>(size.y));
+    const Letterbox box = Letterbox::fit(static_cast<float>(size.x), static_cast<float>(size.y), lw, lh);
+    glDisable(GL_SCISSOR_TEST);
     glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    const GLint x = static_cast<GLint>(std::lround(box.offsetX));
+    const GLint y = static_cast<GLint>(std::lround(static_cast<float>(size.y) - box.offsetY - box.height));
+    const GLsizei w = static_cast<GLsizei>(std::lround(box.width));
+    const GLsizei h = static_cast<GLsizei>(std::lround(box.height));
+    glViewport(x, y, w, h);
+    glScissor(x, y, w, h);
+    glEnable(GL_SCISSOR_TEST);
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0.0, size.x, size.y, 0.0, -1.0, 1.0);
+    glOrtho(0.0, lw, lh, 0.0, -1.0, 1.0);
     glMatrixMode(GL_MODELVIEW);
 
     glClearColor(clear.r / 255.0f, clear.g / 255.0f, clear.b / 255.0f, 1.0f);
@@ -41,6 +61,7 @@ void GLRenderer::beginFrame(Rgba clear) {
 }
 
 void GLRenderer::endFrame() {
+    glDisable(GL_SCISSOR_TEST);
     glFlush();
 }
 

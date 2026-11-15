@@ -386,3 +386,9 @@ add_executable(test_high_scores
 )
 target_include_directories(test_high_scores PRIVATE src)
 add_test(NAME high_scores COMMAND test_high_scores)
+
+add_executable(test_letterbox
+    tests/test_letterbox.cpp
+)
+target_include_directories(test_letterbox PRIVATE src)
+add_test(NAME letterbox COMMAND test_letterbox)

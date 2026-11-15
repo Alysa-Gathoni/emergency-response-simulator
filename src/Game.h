@@ -4,6 +4,7 @@
 #include "render/SoftwareRenderer.h"
 #include <string>
 #include "core/Camera2D.h"
+#include "core/Letterbox.h"
 #include "lines/LineRenderer.h"
 #include "city/RoadNetwork.h"
 #include "city/RoadGraph.h"
@@ -55,7 +56,10 @@ public:
     // '!' in `keys` lets the demo driver follow the route, so a whole call
     // (drive, treat, hospital, result screen) can be captured; '@' shows
     // the title menu.
-    int renderScreenshot(const std::string& path, float seconds, const std::string& keys);
+    // `width` x `height` (0 = 1100 x 720) renders into a canvas of another
+    // size, to show the letterboxing of a resized window.
+    int renderScreenshot(const std::string& path, float seconds, const std::string& keys,
+                         unsigned width = 0, unsigned height = 0);
 
 private:
     LineRenderer lines_{LineMode::Bresenham};
