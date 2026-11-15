@@ -29,6 +29,8 @@ Game::Game() {
     traffic_.keepClear(startPosition_, 140.0f);
     traffic_.reset();
     routeGuide_.setEdgeFactors(&congestion_.factors());
+    highScores_.load();
+    bestScore_ = highScores_.best();
     camera_.setWorld(network_.width(), network_.height());
     camera_.snapTo(startPosition_);
 }
@@ -36,21 +38,35 @@ Game::Game() {
 bool Game::handleMenuKey(sf::Keyboard::Key key) {
     using K = sf::Keyboard;
     switch (screen_) {
-        case Screen::Title:
+        case Screen::Title: {
             if (key == K::Up || key == K::W)
                 menuIndex_ = (menuIndex_ + Screens::MenuItemCount - 1) % Screens::MenuItemCount;
             if (key == K::Down || key == K::S)
                 menuIndex_ = (menuIndex_ + 1) % Screens::MenuItemCount;
             if (key == K::Escape) return false;
+            const auto item = static_cast<Screens::MenuItem>(menuIndex_);
+            // Difficulty: left/right (or Enter) cycle Easy -> Normal -> Hard.
+            if (item == Screens::MenuItem::Difficulty) {
+                int d = static_cast<int>(difficulty_);
+                if (key == K::Left || key == K::A) d = (d + DifficultyCount - 1) % DifficultyCount;
+                if (key == K::Right || key == K::D || key == K::Enter || key == K::Space)
+                    d = (d + 1) % DifficultyCount;
+                difficulty_ = static_cast<Difficulty>(d);
+                break;
+            }
             if (key == K::Enter || key == K::Space) {
-                switch (static_cast<Screens::MenuItem>(menuIndex_)) {
-                    case Screens::MenuItem::Start:    startShift(); break;
-                    case Screens::MenuItem::Controls: screen_ = Screen::Controls; break;
-                    case Screens::MenuItem::Quit:     return false;
+                switch (item) {
+                    case Screens::MenuItem::Start:      startShift(); break;
+                    case Screens::MenuItem::HighScores: screen_ = Screen::HighScoreTable; break;
+                    case Screens::MenuItem::Controls:   screen_ = Screen::Controls; break;
+                    case Screens::MenuItem::Quit:       return false;
+                    case Screens::MenuItem::Difficulty: break;
                 }
             }
             break;
+        }
         case Screen::Controls:
+        case Screen::HighScoreTable:
             if (key == K::Escape || key == K::Enter) screen_ = Screen::Title;
             break;
         case Screen::Result:
@@ -75,7 +91,7 @@ bool Game::handleKey(sf::Keyboard::Key key) {
     switch (key) {
         case sf::Keyboard::Escape:
             // First Esc pauses, a second one goes back to the main menu.
-            if (paused_) { paused_ = false; screen_ = Screen::Title; }
+            if (paused_) { paused_ = false; finishShift(); screen_ = Screen::Title; }
             else paused_ = true;
             break;
         case sf::Keyboard::G:
@@ -117,8 +133,22 @@ void Game::restart() {
     screen_ = Screen::Playing;
 }
 
+void Game::finishShift() {
+    if (shiftRecorded_) return;
+    shiftRecorded_ = true;
+    lastRank_ = highScores_.submit(runTotal_, difficulty_, mission_.completed());
+    if (lastRank_ >= 0) highScores_.save();
+    bestScore_ = std::max(bestScore_, highScores_.best());
+}
+
 void Game::startShift() {
+    // Difficulty: traffic density, time limits and score multiplier.
+    const DifficultySettings& s = settingsFor(difficulty_);
+    traffic_.setDensity(static_cast<TrafficDensity>(s.trafficDensity));
+    mission_.setTimeScale(s.timeScale);
     restart();
+    shiftRecorded_ = false;
+    lastRank_ = -1;
     help_.setExpanded(true);
     helpAutoHidden_ = false;
 }
@@ -184,6 +214,7 @@ void Game::trackMission() {
         lastReport_.routeLength = callRouteLength_;
         lastReport_.stops = transportCounted_ ? 2 : 1;
         lastReport_.delivered = arrived && transportCounted_;
+        lastReport_.multiplier = settingsFor(difficulty_).scoreMultiplier;
         lastReport_.collisions = collisions_.collisions() - callStartCollisions_;
         lastReport_.redLights = redLightCamera_.violations() - callStartRedLights_;
         lastReport_.wrongTurns = routeGuide_.wrongTurns() - callStartWrongTurns_;
@@ -191,6 +222,7 @@ void Game::trackMission() {
         runTotal_ += lastScore_.total;
         bestScore_ = std::max(bestScore_, runTotal_);
         screen_ = lastReport_.arrived ? Screen::Result : Screen::GameOver;
+        if (!lastReport_.arrived) finishShift();
         callStarted_ = false;
     }
     lastMissionState_ = state;
@@ -371,7 +403,10 @@ void Game::render(IRenderer& target) {
 
     switch (screen_) {
         case Screen::Title:
-            Screens::drawTitle(target, lines_, menuIndex_, bestScore_);
+            Screens::drawTitle(target, lines_, menuIndex_, bestScore_, difficulty_);
+            break;
+        case Screen::HighScoreTable:
+            Screens::drawHighScores(target, lines_, highScores_);
             break;
         case Screen::Controls: {
             Screens::dim(target, lines_, 150);
@@ -397,7 +432,7 @@ void Game::render(IRenderer& target) {
             if (screen_ == Screen::Result)
                 Screens::drawResult(target, lines_, lastReport_, lastScore_, runTotal_);
             if (screen_ == Screen::GameOver)
-                Screens::drawGameOver(target, lines_, mission_.completed(), runTotal_);
+                Screens::drawGameOver(target, lines_, mission_.completed(), runTotal_, lastRank_);
             break;
         }
     }
@@ -485,6 +520,7 @@ int Game::renderScreenshot(const std::string& path, float seconds, const std::st
     screen_ = Screen::Playing;
     for (char k : keys) {
         if (k == '@') { screen_ = Screen::Title; continue; }   // menu screenshot
+        if (k == '$') { screen_ = Screen::HighScoreTable; continue; }
         if (k == '!') { demoDriving_ = true; continue; }       // autopilot
         const char upper = static_cast<char>(std::toupper(static_cast<unsigned char>(k)));
         if (upper >= 'A' && upper <= 'Z')

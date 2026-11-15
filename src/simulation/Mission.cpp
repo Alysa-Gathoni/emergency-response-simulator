@@ -55,7 +55,7 @@ void Mission::nextIncident(Point ambulancePosition) {
     state_ = State::EnRoute;
     elapsed_ = 0.0f;
     firstLeg_ = 0.0f;
-    legLimit_ = incidentInfo(type_).timeLimit;
+    legLimit_ = incidentInfo(type_).timeLimit * timeScale_;
     hold_ = 0.0f;
     treatment_ = 0.0f;
 }
@@ -127,9 +127,9 @@ void Mission::update(float deltaTime, Point ambulancePosition, float ambulanceSp
             // Second leg: patient on board, new timer to the hospital.
             firstLeg_ = elapsed_;
             elapsed_ = 0.0f;
-            legLimit_ = (std::abs(hospital_.x - ambulancePosition.x) +
-                         std::abs(hospital_.y - ambulancePosition.y)) / TransportSpeed
-                      + TransportAllowance;
+            legLimit_ = ((std::abs(hospital_.x - ambulancePosition.x) +
+                          std::abs(hospital_.y - ambulancePosition.y)) / TransportSpeed
+                         + TransportAllowance) * timeScale_;
             state_ = State::Transport;
             return;
 

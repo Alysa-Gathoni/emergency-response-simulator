@@ -5,3 +5,5 @@ out/
 .vscode/
 .idea/
 screenshot-*.png
+# High-score table written by the game
+highscores.txt

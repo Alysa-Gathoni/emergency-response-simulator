@@ -18,6 +18,7 @@
 #include "simulation/CollisionSystem.h"
 #include "simulation/Congestion.h"
 #include "simulation/DemoDriver.h"
+#include "simulation/HighScores.h"
 #include "simulation/Mission.h"
 #include "simulation/RouteGuide.h"
 #include "simulation/Scoring.h"
@@ -93,13 +94,17 @@ private:
     bool curveDebug_{false};
     bool paused_{false};
 
-    enum class Screen { Title, Controls, Playing, Result, GameOver };
+    enum class Screen { Title, Controls, HighScoreTable, Playing, Result, GameOver };
     Screen screen_{Screen::Title};
     int menuIndex_{0};
 
     // Scoring of the current shift (one run from Start to game over).
     int runTotal_{0};
     int bestScore_{0};
+    Difficulty difficulty_{Difficulty::Normal};
+    HighScores highScores_;
+    int lastRank_{-1};
+    bool shiftRecorded_{true};
     MissionReport lastReport_;
     ScoreBreakdown lastScore_;
     Mission::State lastMissionState_{Mission::State::EnRoute};
@@ -121,6 +126,7 @@ private:
     bool handleMenuKey(sf::Keyboard::Key key);
     void restart();
     void startShift();
+    void finishShift();          // records the shift in the high-score table
     void step(float deltaTime, const DrivingInput& input);
     void stepWorld(float deltaTime);
     void updateTraffic(float deltaTime, bool siren);
