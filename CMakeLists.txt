@@ -46,6 +46,8 @@ add_executable(EmergencyResponseSimulator
     src/simulation/RouteGuide.cpp
     src/simulation/SceneNode.cpp
     src/simulation/Scoring.cpp
+    src/simulation/SirenGlow.cpp
+    src/simulation/SkidMarks.cpp
     src/simulation/TrafficRules.cpp
     src/simulation/TrafficVehicle.cpp
     src/simulation/TrafficSystem.cpp
@@ -104,6 +106,7 @@ add_test(NAME mat3 COMMAND test_mat3)
 add_executable(test_driving
     tests/test_driving.cpp
     src/simulation/Ambulance.cpp
+    src/simulation/SkidMarks.cpp
     src/simulation/SceneNode.cpp
     src/core/Mat3.cpp
     src/lines/LineAlgorithms.cpp

@@ -104,12 +104,13 @@ void Ambulance::syncModel() {
     for (SceneNode* wheel : wheels_)
         wheel->spin = wheelSpin_;
 
-    // Siren lights alternate four times a second.
-    const bool phase = std::fmod(time_, 0.5f) < 0.25f;
-    redLight_->fill = phase ? Rgba(255, 60, 60) : Rgba(90, 25, 25);
-    blueLight_->fill = phase ? Rgba(25, 35, 90) : Rgba(70, 120, 255);
+    // Siren lights alternate four times a second (dark when switched off).
+    const bool phase = sirenPhase() == 0;
+    redLight_->fill = siren_ && phase ? Rgba(255, 60, 60) : Rgba(90, 25, 25);
+    blueLight_->fill = siren_ && !phase ? Rgba(70, 120, 255) : Rgba(25, 35, 90);
 
-    beacon_->children.front()->local = Mat3::rotation(time_ * 6.0f);
+    beacon_->children.front()->local = Mat3::rotation(siren_ ? time_ * 6.0f : 0.0f);
+    beacon_->children.front()->fill = siren_ ? Rgba(120, 170, 255, 170) : Rgba(120, 170, 255, 0);
 
     for (SceneNode* light : brakeLights_)
         light->fill = braking_ ? Rgba(255, 50, 40) : Rgba(90, 20, 20);
@@ -163,6 +164,15 @@ void Ambulance::drive(const DrivingInput& input, float deltaTime) {
     position_.x += std::cos(radians) * distance;
     position_.y += std::sin(radians) * distance;
     wheelSpin_ += distance / WheelRadius;
+
+    // 5. Tyre slide for the skid marks.
+    const float v = std::abs(speed_);
+    float slide = 0.0f;
+    if (input.handbrake && v > 25.0f) slide = std::min(1.0f, v / 100.0f);
+    if (braking_ && !input.handbrake && v > 80.0f) slide = std::max(slide, (v - 80.0f) / 60.0f);
+    const float lateral = v * v * std::abs(std::tan(steer_)) / Wheelbase;
+    if (lateral > GripLimit) slide = std::max(slide, (lateral - GripLimit) / 300.0f);
+    skid_ = std::clamp(std::max(slide, impact_ > 0.3f ? impact_ : 0.0f), 0.0f, 1.0f);
 }
 
 void Ambulance::update(float deltaTime, const DrivingInput& input) {
@@ -218,12 +228,30 @@ void Ambulance::resolveCollision(Point separation) {
 }
 
 float Ambulance::impact() const { return impact_; }
+float Ambulance::skid() const { return skid_; }
+
+void Ambulance::rearWheels(Point& left, Point& right) const {
+    left = root_->local.apply(Point{-18.0f, -18.0f});
+    right = root_->local.apply(Point{-18.0f, 18.0f});
+}
+
+void Ambulance::setSiren(bool on) {
+    if (siren_ == on) return;
+    siren_ = on;
+    syncModel();
+}
+
+bool Ambulance::sirenOn() const { return siren_; }
+int Ambulance::sirenPhase() const { return std::fmod(time_, 0.5f) < 0.25f ? 0 : 1; }
+Point Ambulance::redLightPosition() const { return root_->local.apply(Point{1.0f, -8.0f}); }
+Point Ambulance::blueLightPosition() const { return root_->local.apply(Point{1.0f, 8.0f}); }
 
 void Ambulance::resetTo(Point position, float headingDegrees) {
     position_ = position;
     headingDegrees_ = headingDegrees;
     speed_ = 0.0f;
     steer_ = 0.0f;
+    skid_ = 0.0f;
     syncModel();
 }
 

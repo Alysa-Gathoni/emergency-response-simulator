@@ -103,6 +103,7 @@ void Game::restart() {
     congestion_.reset();
     trafficLights_.reset();
     collisions_.reset();
+    skidMarks_.reset();
     redLightCamera_.reset();
     mission_.restart(startPosition_);
     camera_.snapTo(startPosition_);
@@ -193,6 +194,7 @@ void Game::trackMission() {
 
 void Game::step(float dt, const DrivingInput& input) {
     const Point beforeMove = ambulance_.position();
+    ambulance_.setSiren(sirenOn());
     ambulance_.update(dt, input);
     redLightCamera_.update(beforeMove, ambulance_.position(), dt);
     trafficLights_.update(dt);
@@ -201,6 +203,7 @@ void Game::step(float dt, const DrivingInput& input) {
     updateTraffic(dt, sirenOn());
 
     collisions_.update(ambulance_, city_, traffic_, dt);
+    skidMarks_.update(dt, ambulance_);
     mission_.update(dt, ambulance_.position(), ambulance_.speed());
     routeGuide_.update(dt, ambulance_.position(), mission_.target(), mission_.driving());
     trackMission();
@@ -309,6 +312,7 @@ void Game::render(IRenderer& target) {
         city_.draw(target, lines_, graphicsDebug_);
         environment_.draw(target, graphicsDebug_);
     }
+    skidMarks_.draw(target, lines_);
     trafficLights_.draw(target, lines_, graphicsDebug_);
     pedestrians_.draw(target, lines_, trafficLights_, graphicsDebug_);
     traffic_.draw(target, lines_, curveDebug_, graphicsDebug_);
@@ -323,6 +327,7 @@ void Game::render(IRenderer& target) {
     target.setView(camera_.view());
     lines_.setClip(clip);
     drawNightLights(target, clip);
+    SirenGlow::draw(target, ambulance_, dayNight_.darkness());
 
     // Guidance stays bright at night: route and incident marker on top.
     if (routeGuide_.comparing() && mission_.driving()) congestion_.draw(target, lines_);

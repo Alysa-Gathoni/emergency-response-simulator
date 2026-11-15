@@ -1,5 +1,6 @@
 #include "Check.h"
 #include "simulation/Ambulance.h"
+#include "simulation/SkidMarks.h"
 #include <cmath>
 
 namespace {
@@ -88,7 +89,49 @@ void movingAwayIsUntouched() {
 
 }
 
+void handbrakeLeavesSkidMarks() {
+    Ambulance a({200, 200});
+    SkidMarks marks;
+    DrivingInput go;
+    go.throttle = 1.0f;
+    for (int i = 0; i < 120; ++i) { a.update(1.0f / 60.0f, go); marks.update(1.0f / 60.0f, a); }
+    CHECK(a.skid() == 0.0f);                    // straight acceleration: no slide
+    CHECK(marks.marks().empty());
+
+    DrivingInput slide;
+    slide.handbrake = true;
+    for (int i = 0; i < 20; ++i) { a.update(1.0f / 60.0f, slide); marks.update(1.0f / 60.0f, a); }
+    CHECK(!marks.marks().empty());
+    // Two marks (one per rear wheel) per frame, behind the ambulance.
+    const auto& m = marks.marks().back();
+    CHECK(m.b.x < a.position().x);
+    CHECK(m.strength > 0.0f && m.strength <= 1.0f);
+
+    // Marks fade out and are removed after their lifetime.
+    DrivingInput none;
+    for (int i = 0; i < static_cast<int>((SkidMarks::Lifetime + 0.5f) * 60); ++i) {
+        a.update(1.0f / 60.0f, none);
+        marks.update(1.0f / 60.0f, a);
+    }
+    CHECK(marks.marks().empty());
+}
+
+void sirenLightsAlternate() {
+    Ambulance a({100, 100});
+    CHECK(a.sirenOn());
+    const int first = a.sirenPhase();
+    a.update(0.25f, DrivingInput{});
+    CHECK(a.sirenPhase() != first);
+    // Lights sit on the roof either side of the centre line.
+    CHECK_NEAR(a.redLightPosition().y, 92.0f, 1e-3f);
+    CHECK_NEAR(a.blueLightPosition().y, 108.0f, 1e-3f);
+    a.setSiren(false);
+    CHECK(!a.sirenOn());
+}
+
 int main() {
+    handbrakeLeavesSkidMarks();
+    sirenLightsAlternate();
     topSpeedIsCapped();
     steeringFadesWithSpeed();
     headingAssistStraightens();

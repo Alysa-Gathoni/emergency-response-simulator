@@ -60,6 +60,24 @@ public:
     // 0..1 strength of the most recent hit, fading over about 1/3 s.
     float impact() const;
 
+    // How hard the tyres are sliding, 0..1 (drives the skid marks):
+    //   handbrake while moving:   |v| / 100
+    //   hard braking above 80 px/s: (|v| - 80) / 60
+    //   cornering: lateral acceleration a = v^2 * tan(steer) / wheelbase
+    //              above GripLimit: (a - GripLimit) / 300
+    //   a hit: the impact strength
+    static constexpr float GripLimit = 350.0f;   // px/s^2
+    float skid() const;
+    // World positions of the two rear wheels (scene graph mounts).
+    void rearWheels(Point& left, Point& right) const;
+
+    // Lights and siren. Off: the light bar stays dark and the beacon stops.
+    void setSiren(bool on);
+    bool sirenOn() const;
+    int sirenPhase() const;          // 0 = red lit, 1 = blue lit
+    Point redLightPosition() const;  // world space
+    Point blueLightPosition() const;
+
     // Place the ambulance (mission restart).
     void resetTo(Point position, float headingDegrees);
 
@@ -82,6 +100,8 @@ private:
     bool braking_{false};
     float impact_{0.0f};
     Point contact_{0.0f, 0.0f};
+    float skid_{0.0f};
+    bool siren_{true};
 
     void buildModel();
     void syncModel();

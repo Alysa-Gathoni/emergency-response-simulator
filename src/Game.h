@@ -21,6 +21,8 @@
 #include "simulation/Mission.h"
 #include "simulation/RouteGuide.h"
 #include "simulation/Scoring.h"
+#include "simulation/SirenGlow.h"
+#include "simulation/SkidMarks.h"
 #include "simulation/TrafficSystem.h"
 #include "ui/HelpPanel.h"
 #include "ui/Hud.h"
@@ -73,6 +75,7 @@ private:
     bool sirenMuted_{false};
     RedLightCamera redLightCamera_{network_, trafficLights_};
     CollisionSystem collisions_;
+    SkidMarks skidMarks_;
     Hud hud_;
     HelpPanel help_;
     ObjectiveBanner banner_;
