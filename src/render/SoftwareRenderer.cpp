@@ -1,4 +1,5 @@
 #include "SoftwareRenderer.h"
+#include "../core/Letterbox.h"
 
 namespace {
 sf::Color toSf(Rgba c) { return sf::Color(c.r, c.g, c.b, c.a); }
@@ -8,7 +9,25 @@ void SoftwareRenderer::beginFrame(Rgba clear) {
     // OpenGL may have drawn the previous frame into the same context.
     target_->resetGLStates();
     target_->setView(target_->getDefaultView());
-    target_->clear(toSf(clear));
+    target_->clear(sf::Color::Black);
+
+    // Letterbox: an SFML view of the logical screen with a viewport (in
+    // fractions of the window) on the fitted area.
+    const sf::Vector2u size = target_->getSize();
+    const float lw = logicalWidth(static_cast<float>(size.x));
+    const float lh = logicalHeight(static_cast<float>(size.y));
+    const Letterbox box = Letterbox::fit(static_cast<float>(size.x), static_cast<float>(size.y), lw, lh);
+    sf::View view(sf::FloatRect(0.0f, 0.0f, lw, lh));
+    if (box.visible())
+        view.setViewport(sf::FloatRect(box.offsetX / size.x, box.offsetY / size.y,
+                                       box.width / size.x, box.height / size.y));
+    target_->setView(view);
+
+    // Background of the logical area (clear() ignores the viewport).
+    matrix_ = Mat3::identity();
+    sf::VertexArray background(sf::Quads, 4);
+    quad(background, 0, {0, 0}, {lw, 0}, {lw, lh}, {0, lh}, toSf(clear));
+    target_->draw(background);
     setView(Mat3::identity());
 }
 

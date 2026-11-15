@@ -29,6 +29,11 @@ public:
     virtual void beginFrame(Rgba clear) = 0;
     virtual void endFrame() = 0;
 
+    // Size of the logical screen everything is drawn in (1100 x 720).
+    // The backends fit it into the real window with a Letterbox, so the
+    // window can be resized freely; 0 = use the target's own size.
+    void setLogicalSize(float width, float height) { logicalW_ = width; logicalH_ = height; }
+
     // True when the model matrix stack is applied by graphics hardware.
     virtual bool hardwareTransforms() const = 0;
 
@@ -94,5 +99,13 @@ private:
     Mat3 view_ = Mat3::identity();
     std::vector<Mat3> stack_;
     ClipRect pixelClip_{};
+    float logicalW_{0.0f};
+    float logicalH_{0.0f};
+
+protected:
+    float logicalWidth(float targetWidth) const { return logicalW_ > 0.0f ? logicalW_ : targetWidth; }
+    float logicalHeight(float targetHeight) const { return logicalH_ > 0.0f ? logicalH_ : targetHeight; }
+
+private:
     bool hasPixelClip_{false};
 };

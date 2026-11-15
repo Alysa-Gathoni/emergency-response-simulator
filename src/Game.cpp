@@ -30,6 +30,10 @@ Game::Game() {
     traffic_.reset();
     routeGuide_.setEdgeFactors(&congestion_.factors());
     highScores_.load();
+    // Everything is laid out for 1100 x 720; the renderers fit that into
+    // whatever size the window has.
+    software_.setLogicalSize(Screens::Width, Screens::Height);
+    gl_.setLogicalSize(Screens::Width, Screens::Height);
     bestScore_ = highScores_.best();
     camera_.setWorld(network_.width(), network_.height());
     camera_.snapTo(startPosition_);
@@ -456,7 +460,7 @@ int Game::run() {
         sf::VideoMode(static_cast<unsigned>(Screens::Width),
                       static_cast<unsigned>(Screens::Height)),
         "Emergency Response Simulator",
-        sf::Style::Titlebar | sf::Style::Close);
+        sf::Style::Default);                      // resizable
     window.setVerticalSyncEnabled(true);
 
     sf::Clock clock;
@@ -471,11 +475,19 @@ int Game::run() {
                 if (event.key.code == sf::Keyboard::F12) saveScreenshot(window);
                 else if (!handleKey(event.key.code)) window.close();
             }
+            // Leaving the window pauses the drive, so nothing happens unseen.
+            if (event.type == sf::Event::LostFocus && screen_ == Screen::Playing)
+                paused_ = true;
             if (event.type == sf::Event::MouseButtonPressed
-                && event.mouseButton.button == sf::Mouse::Left
-                && help_.headerContains({static_cast<float>(event.mouseButton.x),
-                                         static_cast<float>(event.mouseButton.y)}))
-                help_.toggle();
+                && event.mouseButton.button == sf::Mouse::Left) {
+                // Window pixels -> logical screen (inverse of the letterbox).
+                const sf::Vector2u size = window.getSize();
+                const Letterbox box = Letterbox::fit(static_cast<float>(size.x), static_cast<float>(size.y),
+                                                     Screens::Width, Screens::Height);
+                const Point p = box.toLogical({static_cast<float>(event.mouseButton.x),
+                                               static_cast<float>(event.mouseButton.y)});
+                if (help_.headerContains(p)) help_.toggle();
+            }
         }
 
         accumulator += std::min(clock.restart().asSeconds(), MaxFrameTime);
@@ -498,6 +510,12 @@ int Game::run() {
             accumulator -= FixedStep;
         }
 
+        // Minimised: keep simulating at the fixed step, skip drawing.
+        const sf::Vector2u size = window.getSize();
+        if (size.x == 0 || size.y == 0) {
+            sf::sleep(sf::milliseconds(10));
+            continue;
+        }
         render(renderer(window));
         window.display();
     }
@@ -513,7 +531,8 @@ DrivingInput Game::demoInput(float dt) {
     return demoDriver_.drive(ambulance_, routeGuide_.route(), nearby, true, dt);
 }
 
-int Game::renderScreenshot(const std::string& path, float seconds, const std::string& keys) {
+int Game::renderScreenshot(const std::string& path, float seconds, const std::string& keys,
+                           unsigned width, unsigned height) {
     // Evidence shots show the scene with the controls panel minimised;
     // an 'H' in `keys` opens it again.
     help_.setExpanded(false);
@@ -535,8 +554,8 @@ int Game::renderScreenshot(const std::string& path, float seconds, const std::st
     }
 
     sf::RenderTexture canvas;
-    if (!canvas.create(static_cast<unsigned>(Screens::Width),
-                       static_cast<unsigned>(Screens::Height)))
+    if (!canvas.create(width ? width : static_cast<unsigned>(Screens::Width),
+                       height ? height : static_cast<unsigned>(Screens::Height)))
         return 1;
     render(renderer(canvas));
     canvas.display();
