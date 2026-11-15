@@ -1,4 +1,5 @@
 #include "Screens.h"
+#include "../simulation/Incidents.h"
 #include "PixelFont.h"
 #include "../polygons/Polygon.h"
 #include "../rasterization/PolygonFill.h"
@@ -38,7 +39,6 @@ std::string mmss(float seconds) {
     return buffer;
 }
 
-const char* CallNames[] = {"MEDICAL CALL", "FIRE CALL", "ROAD CRASH"};
 
 }
 
@@ -109,6 +109,7 @@ std::vector<std::string> resultLines(const MissionReport& r, const ScoreBreakdow
         "TIME BONUS      " + signedValue(s.timeBonus, '+'),
         "COLLISIONS " + std::to_string(r.collisions) + "    " + signedValue(s.collisionPenalty, '-'),
         "RED LIGHTS " + std::to_string(r.redLights) + "    " + signedValue(s.redLightPenalty, '-'),
+        "WRONG TURNS " + std::to_string(r.wrongTurns) + "   " + signedValue(s.wrongTurnPenalty, '-'),
         "CALL SCORE      " + std::to_string(s.total),
         "SHIFT TOTAL     " + std::to_string(runTotal),
     };
@@ -119,7 +120,7 @@ void drawResult(IRenderer& target, const LineRenderer& lines,
     dim(target, lines, 110);
     panel(target, lines, 300, 150, 800, 570);
     centred(target, r.delivered ? "PATIENT DELIVERED" : "SCENE SECURED", 176, 3, Good);
-    centred(target, CallNames[std::clamp(r.incidentType, 0, 2)], 210, 2, Muted);
+    centred(target, incidentInfo(r.incidentType).callName, 210, 2, Muted);
 
     float y = 252;
     for (const std::string& line : resultLines(r, s, runTotal)) {

@@ -17,13 +17,14 @@ struct BannerData {
     enum class Phase { EnRoute, OnScene, Transport, Arrived, Missed };
 
     Phase phase{Phase::EnRoute};
-    int incidentType{0};        // 0 medical, 1 fire, 2 accident
+    int incidentType{0};        // IncidentType (see Incidents.h)
     int metresToGo{0};          // along the route
     bool nearScene{false};      // close enough to start stopping
     bool holding{false};        // stopped inside the arrival radius
     float responseTime{0.0f};   // seconds, once arrived
     float treatment{0.0f};      // 0..1 while on scene
     bool delivered{false};      // the call ended at the hospital
+    bool recalculating{false};  // the driver left the route just now
 };
 
 class ObjectiveBanner {

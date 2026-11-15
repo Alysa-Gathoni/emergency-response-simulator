@@ -1,16 +1,12 @@
 #include "Scoring.h"
+#include "Incidents.h"
 #include <algorithm>
 #include <cmath>
 
 namespace Scoring {
 
 int baseScore(int incidentType) {
-    switch (incidentType) {
-        case 0: return 500;   // medical: most urgent
-        case 1: return 400;   // fire
-        case 2: return 450;   // road accident
-    }
-    return 400;
+    return incidentInfo(incidentType).baseScore;
 }
 
 float parTime(float routeLength, int stops) {
@@ -35,7 +31,9 @@ ScoreBreakdown score(const MissionReport& r) {
     s.timeBonus = static_cast<int>(std::lround(saved * BonusPerSecond));
     s.collisionPenalty = std::max(0, r.collisions) * CollisionPenalty;
     s.redLightPenalty = std::max(0, r.redLights) * RedLightPenalty;
-    s.total = std::max(0, s.base + s.timeBonus - s.collisionPenalty - s.redLightPenalty);
+    s.wrongTurnPenalty = std::max(0, r.wrongTurns) * WrongTurnPenalty;
+    s.total = std::max(0, s.base + s.timeBonus - s.collisionPenalty - s.redLightPenalty
+                              - s.wrongTurnPenalty);
     s.grade = grade(s.total, s.base);
     return s;
 }

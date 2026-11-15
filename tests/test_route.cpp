@@ -63,7 +63,66 @@ void routeEndsAtBothPoints() {
 
 }
 
+void followsThenRecalculates() {
+    RoadNetwork network = small();
+    RoadGraph graph(network);
+    RouteGuide guide(graph);
+    const Point target{980, 545};                 // bottom-right, via (800,200) and (800,520)
+
+    Point p{420, 175};
+    guide.update(0.1f, p, target, true);
+    const float first = guide.remaining();
+    CHECK(guide.wrongTurns() == 0);
+
+    // Drive east along the planned road for 6 s: the route is trimmed
+    // (and refreshed for congestion), never counted as a wrong turn.
+    for (int i = 0; i < 20; ++i) {
+        p.x += 10.0f;
+        guide.update(0.3f, p, target, true);
+    }
+    CHECK(guide.wrongTurns() == 0);
+    CHECK_NEAR(guide.remaining(), first - 200.0f, 2.0f);
+    CHECK(guide.route().front().x == p.x && guide.route().front().y == p.y);
+
+    // Turn off down the x = 300 road... first jump to it: far from the route.
+    p = {335, 400};
+    guide.update(0.1f, p, target, true);
+    CHECK(guide.wrongTurns() == 1);
+    CHECK(guide.recalculating());
+
+    // New call (new target): re-planned but not a wrong turn.
+    guide.update(0.1f, p, {120, 545}, true);
+    CHECK(guide.wrongTurns() == 1);
+    for (int i = 0; i < 30; ++i) guide.update(0.1f, p, {120, 545}, true);
+    CHECK(!guide.recalculating());
+
+    // Driving the wrong way along the route also counts, once the grace
+    // period for turning round at the start of a leg is over.
+    RouteGuide back(graph);
+    Point q{600, 165};
+    back.update(0.1f, q, {980, 165}, true);        // straight east
+    for (int i = 0; i < 25; ++i) {
+        q.x -= 10.0f;                              // ...but going west for 7.5 s
+        back.update(0.3f, q, {980, 165}, true);
+        if (i == 10) CHECK(back.wrongTurns() == 0);   // still in the grace period
+    }
+    CHECK(back.wrongTurns() == 1);
+    back.resetCount();
+    CHECK(back.wrongTurns() == 0);
+}
+
+void distanceToPolyline() {
+    const std::vector<Point> l = {{0, 0}, {100, 0}, {100, 100}};
+    int seg = -1;
+    CHECK_NEAR(RouteGuide::distanceTo(l, {50, 10}, &seg), 10.0f, 1e-4f);
+    CHECK(seg == 0);
+    CHECK_NEAR(RouteGuide::distanceTo(l, {130, 60}, &seg), 30.0f, 1e-4f);
+    CHECK(seg == 1);
+}
+
 int main() {
+    followsThenRecalculates();
+    distanceToPolyline();
     sameRoadGoesStraight();
     turnsAtJunctions();
     picksTheShorterWay();

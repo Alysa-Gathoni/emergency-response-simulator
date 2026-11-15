@@ -42,6 +42,9 @@ int main() {
             ? driver.drive(ambulance, guide.route(), nearby, true, Dt) : DrivingInput{};
 
         ambulance.update(Dt, input);
+        const float h = ambulance.heading() * 3.14159265f / 180.0f;
+        traffic.setEmergency({mission.driving(), ambulance.position(),
+                              {std::cos(h), std::sin(h)}, ambulance.speed()});
         lights.update(Dt);
         pedestrians.update(Dt, lights);
         auto obstacles = pedestrians.footprints();

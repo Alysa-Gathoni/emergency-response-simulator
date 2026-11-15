@@ -6,7 +6,7 @@
 // Values shown on the heads-up display, collected by the main loop from
 // the mission, ambulance, collision and red-light systems.
 struct HudData {
-    int incidentType{0};        // 0 medical, 1 fire, 2 accident
+    int incidentType{0};        // IncidentType (see Incidents.h)
     float timeLeft{0.0f};       // seconds
     float timeLimit{1.0f};
     float distance{0.0f};       // pixels to the incident

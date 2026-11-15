@@ -3,7 +3,8 @@
 // Mission scoring.
 //
 //   score     = max(0, base + timeBonus - collisions * CollisionPenalty
-//                                       - redLights  * RedLightPenalty)
+//                                       - redLights  * RedLightPenalty
+//                                       - wrongTurns * WrongTurnPenalty)
 //   timeBonus = clamp(parTime - elapsed, 0, MaxBonusSeconds) * BonusPerSecond
 //   parTime   = routeLength / ParSpeed + StopAllowance * stops
 //
@@ -15,7 +16,7 @@
 // start of the call, so beating it is rewarded and a reckless fast run
 // still loses points for every crash and red light.
 struct MissionReport {
-    int incidentType{0};       // 0 medical, 1 fire, 2 accident
+    int incidentType{0};       // IncidentType (see Incidents.h)
     bool arrived{false};       // false = time limit exceeded
     float elapsed{0.0f};       // seconds
     float routeLength{0.0f};   // pixels, shortest route(s) when each leg started
@@ -23,6 +24,7 @@ struct MissionReport {
     bool delivered{false};     // patient handed over at the hospital
     int collisions{0};         // during this call only
     int redLights{0};          // during this call only
+    int wrongTurns{0};         // times the route had to be recalculated
 };
 
 struct ScoreBreakdown {
@@ -31,6 +33,7 @@ struct ScoreBreakdown {
     int timeBonus{0};
     int collisionPenalty{0};
     int redLightPenalty{0};
+    int wrongTurnPenalty{0};
     int total{0};
     char grade{'F'};
 };
@@ -43,6 +46,7 @@ constexpr float MaxBonusSeconds = 30.0f;
 constexpr int BonusPerSecond = 10;
 constexpr int CollisionPenalty = 50;
 constexpr int RedLightPenalty = 30;
+constexpr int WrongTurnPenalty = 20;
 
 int baseScore(int incidentType);
 float parTime(float routeLength, int stops = 1);

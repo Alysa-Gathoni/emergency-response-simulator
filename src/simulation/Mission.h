@@ -3,9 +3,8 @@
 #include <random>
 #include <vector>
 #include "EmergencyMarker.h"
+#include "Incidents.h"
 #include "../lines/LineRenderer.h"
-
-enum class IncidentType { Medical, Fire, Accident };
 
 // One emergency call after another, as a state machine:
 //

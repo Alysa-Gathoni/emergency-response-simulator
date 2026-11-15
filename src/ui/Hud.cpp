@@ -1,4 +1,5 @@
 #include "Hud.h"
+#include "../simulation/Incidents.h"
 #include "SevenSegment.h"
 #include "../polygons/Polygon.h"
 #include "../rasterization/PolygonFill.h"
@@ -16,10 +17,7 @@ const Rgba Value(120, 235, 180);
 const Rgba Warning(250, 90, 70);
 const Rgba Unlit(40, 60, 54, 150);
 
-const char* IncidentNames[] = {"AID", "FIRE", "CRASH"};
-const Rgba IncidentColours[] = {
-    {235, 70, 70}, {245, 150, 40}, {240, 210, 60}
-};
+
 
 std::vector<Point> rect(float l, float t, float r, float b) {
     return {{l, t}, {r, t}, {r, b}, {l, b}};
@@ -56,16 +54,15 @@ void Hud::draw(IRenderer& target, const LineRenderer& lines,
     PolygonFill::draw(target, rect(left, top, right, bottom), lines, Panel, false);
     Polygon(rect(left, top, right, bottom)).drawOutline(target, lines, Frame, 1.0f);
 
-    const int type = std::clamp(d.incidentType, 0, 2);
+    const IncidentInfo& call = incidentInfo(d.incidentType);
     const float x = left + 12;
     float y = top + 12;
 
     // Incident type with its marker colour.
     ShapeAlgorithms::drawPoints(target,
                                 ShapeAlgorithms::filledCircle({x + 6, y + 9}, 6),
-                                IncidentColours[type], 1.0f);
-    SevenSegment::drawText(target, lines, IncidentNames[type], {x + 22, y}, 18.0f,
-                           IncidentColours[type]);
+                                call.colour, 1.0f);
+    SevenSegment::drawText(target, lines, call.hudName, {x + 22, y}, 18.0f, call.colour);
     y += 32;
 
     const bool hurry = d.timeLeft < 10.0f;
