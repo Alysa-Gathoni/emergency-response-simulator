@@ -97,6 +97,13 @@ std::vector<std::pair<Point, Point>> spans(const std::string& text,
     return result;
 }
 
+std::vector<Point> pixels(const std::string& text, Point origin, int scale) {
+    std::vector<Point> out;
+    for (const auto& [a, b] : spans(text, origin, scale))
+        for (float x = a.x; x <= b.x; x += 1.0f) out.push_back({x, a.y});
+    return out;
+}
+
 void drawText(IRenderer& target, const std::string& text,
               Point origin, int scale, Rgba colour) {
     Raster::spans(target, spans(text, origin, scale), colour);

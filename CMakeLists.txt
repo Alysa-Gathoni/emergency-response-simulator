@@ -267,6 +267,7 @@ add_executable(test_road_graph
     src/rasterization/PolygonFill.cpp
     src/polygons/Triangulation.cpp
     src/shapes/CircleEllipse.cpp
+    src/ui/PixelFont.cpp
 )
 target_include_directories(test_road_graph PRIVATE src)
 add_test(NAME road_graph COMMAND test_road_graph)
@@ -373,6 +374,7 @@ add_executable(test_minimap
     src/rasterization/Clipping.cpp
     src/rasterization/PolygonFill.cpp
     src/shapes/CircleEllipse.cpp
+    src/ui/PixelFont.cpp
 )
 target_include_directories(test_minimap PRIVATE src)
 add_test(NAME minimap COMMAND test_minimap)

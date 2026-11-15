@@ -3,7 +3,9 @@
 #include <cmath>
 #include <random>
 #include "../core/Color.h"
+#include "../core/Raster.h"
 #include "../rasterization/PolygonFill.h"
+#include "../ui/PixelFont.h"
 
 namespace {
 
@@ -185,6 +187,63 @@ void City::drawMarkings(IRenderer& target, const LineRenderer& lines) const {
         lines.draw(target, stop.a, stop.b, Zebra, 3.0f);
 }
 
+std::vector<Point> City::laneArrow() {
+    return {{-18, -3}, {4, -3}, {4, -9}, {16, 0}, {4, 9}, {4, 3}, {-18, 3}};
+}
+
+void City::drawLaneArrows(IRenderer& target, const LineRenderer& lines) const {
+    // world = T(lane centre 46 px before the line) * R(direction of travel) * arrow
+    const Rgba paint(225, 225, 225, 200);
+    for (const StopLine& stop : network_.stopLines()) {
+        const Point d = headingVector(stop.approach);
+        const Point mid{(stop.a.x + stop.b.x) * 0.5f, (stop.a.y + stop.b.y) * 0.5f};
+        const Point at{mid.x - d.x * 46.0f, mid.y - d.y * 46.0f};
+        const Mat3 place = Mat3::translation(at.x, at.y) * Mat3::rotation(std::atan2(d.y, d.x));
+        PolygonFill::draw(target, place.apply(laneArrow()), lines, paint, false);
+    }
+}
+
+std::vector<City::Label> City::roadLabels() const {
+    std::vector<Label> labels;
+    for (const Road& road : network_.roads()) {
+        if (road.name.empty()) continue;
+        const float width = PixelFont::textWidth(road.name, 2);
+        int section = 0;
+        for (const auto& [from, to] : network_.freeIntervals(road)) {
+            if (to - from < width + 200.0f || section++ % 2 != 0) continue;
+            // A third of the way along, so it stays clear of the matatu
+            // stage in the middle, but at least 70 px past the stop line
+            // and signal; 56 px from the centre, near the kerb.
+            const float along = std::max(from + (to - from) * 0.3f, from + 70.0f + width * 0.5f);
+            const Point centre = road.vertical ? Point{road.centre - 56.0f, along}
+                                               : Point{along, road.centre + 56.0f};
+            labels.push_back({road.name, centre, road.vertical ? -90.0f : 0.0f});
+        }
+    }
+    return labels;
+}
+
+void City::drawRoadNames(IRenderer& target) const {
+    // The 5x7 font's pixels are moved with T(centre) * R(angle) *
+    // T(-half size); a rotation by exactly 90 degrees keeps them on the
+    // pixel grid, so the rotated text has no gaps.
+    const Rgba paint(205, 205, 190, 150);
+    std::vector<Point> all;
+    for (const Label& label : roadLabels()) {
+        const float w = PixelFont::textWidth(label.text, 2);
+        const float h = static_cast<float>(PixelFont::GlyphHeight * 2);
+        const Mat3 place = Mat3::translation(label.centre.x, label.centre.y)
+                         * Mat3::rotationDegrees(label.degrees)
+                         * Mat3::translation(-w * 0.5f, -h * 0.5f);
+        for (const Point& p : PixelFont::pixels(label.text, {0, 0}, 2)) {
+            // Transform the pixel centre, then back to its top-left corner.
+            const Point c = place.apply(Point{p.x + 0.5f, p.y + 0.5f});
+            all.push_back({std::round(c.x - 0.5f), std::round(c.y - 0.5f)});
+        }
+    }
+    Raster::plot(target, all, paint, 1.0f);
+}
+
 void City::draw(IRenderer& target,
                 const LineRenderer& lines,
                 bool polygonDebug) const {
@@ -195,6 +254,8 @@ void City::draw(IRenderer& target,
 
     drawRoads(target, lines);
     drawMarkings(target, lines);
+    drawLaneArrows(target, lines);
+    drawRoadNames(target);
 
     const Rgba roofs[] = {
         Rgba(92, 104, 116), Rgba(104, 96, 90), Rgba(84, 98, 104)
