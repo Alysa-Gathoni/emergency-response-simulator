@@ -63,10 +63,86 @@ float RouteGuide::length(const std::vector<Point>& route) {
 
 RouteGuide::RouteGuide(const RoadGraph& graph) : graph_(graph) {}
 
+float RouteGuide::distanceTo(const std::vector<Point>& route, Point p, int* segment, Point* closest) {
+    float best = std::numeric_limits<float>::max();
+    if (route.size() < 2) return route.empty() ? best : dist(route.front(), p);
+    for (std::size_t i = 1; i < route.size(); ++i) {
+        const Point a = route[i - 1], b = route[i];
+        const Point ab{b.x - a.x, b.y - a.y};
+        const float len2 = ab.x * ab.x + ab.y * ab.y;
+        float t = len2 > 0.0f ? ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / len2 : 0.0f;
+        t = std::clamp(t, 0.0f, 1.0f);
+        const Point q{a.x + ab.x * t, a.y + ab.y * t};
+        const float d = dist(p, q);
+        if (d < best) {
+            best = d;
+            if (segment) *segment = static_cast<int>(i) - 1;
+            if (closest) *closest = q;
+        }
+    }
+    return best;
+}
+
 void RouteGuide::update(float deltaTime, Point ambulance, Point target, bool active) {
     active_ = active;
     phase_ = std::fmod(phase_ + FlowSpeed * deltaTime, DashLength + DashGap);
-    route_ = planWithSearch(ambulance, target);
+    notice_ = std::max(0.0f, notice_ - deltaTime);
+    sinceRefresh_ += deltaTime;
+    legAge_ += deltaTime;
+
+    const bool newTarget = !havePlan_ || dist(target, planTarget_) > 1.0f;
+    bool wrongTurn = false;
+    std::vector<Point> trimmed;
+    if (!newTarget && plan_.size() >= 2) {
+        // Follow the committed plan (without the old start connector): cut
+        // off the part already driven at the ambulance's projection.
+        int segment = 0;
+        Point closest;
+        const float off = distanceTo(plan_, ambulance, &segment, &closest);
+
+        // Wrong way: moving against the route's direction where the
+        // ambulance is, for WrongWayTime in a row.
+        const Point a = plan_[static_cast<std::size_t>(segment)];
+        const Point b = plan_[static_cast<std::size_t>(segment) + 1];
+        const float segLen = dist(a, b);
+        const Point move{ambulance.x - lastPosition_.x, ambulance.y - lastPosition_.y};
+        const float moved = std::hypot(move.x, move.y);
+        if (segLen > 0.0f && moved > 0.3f) {
+            const float along = (move.x * (b.x - a.x) + move.y * (b.y - a.y)) / (segLen * moved);
+            wrongWayTime_ = along < -0.5f ? wrongWayTime_ + deltaTime : 0.0f;
+        }
+        std::vector<Point> rest = {closest};
+        rest.insert(rest.end(), plan_.begin() + segment + 1, plan_.end());
+        plan_.clear();
+        for (const Point& p : rest)
+            if (plan_.empty() || dist(plan_.back(), p) > MergeDistance) plan_.push_back(p);
+
+        trimmed = {ambulance};
+        for (const Point& p : plan_)
+            if (dist(trimmed.back(), p) > MergeDistance) trimmed.push_back(p);
+
+        wrongTurn = active && (off > OffRoute || wrongWayTime_ > WrongWayTime);
+    }
+    lastPosition_ = ambulance;
+
+    if (newTarget || wrongTurn || sinceRefresh_ >= Refresh || trimmed.size() < 2) {
+        route_ = planWithSearch(ambulance, target);
+        plan_.assign(route_.begin() + (route_.size() > 1 ? 1 : 0), route_.end());
+        havePlan_ = true;
+        planTarget_ = target;
+        sinceRefresh_ = 0.0f;
+        if (newTarget) legAge_ = 0.0f;
+        if (wrongTurn) {
+            wrongWayTime_ = 0.0f;
+            // Turning round at the start of a leg is not a mistake.
+            if (legAge_ >= Grace) {
+                ++wrongTurns_;
+                notice_ = RecalcNotice;
+            }
+        }
+    } else {
+        route_ = trimmed;
+    }
 }
 
 void RouteGuide::draw(IRenderer& target, const LineRenderer& lines,

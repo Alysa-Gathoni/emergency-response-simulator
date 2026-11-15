@@ -107,6 +107,7 @@ void Game::restart() {
     skidMarks_.reset();
     redLightCamera_.reset();
     mission_.restart(startPosition_);
+    routeGuide_.resetCount();
     camera_.snapTo(startPosition_);
     paused_ = false;
     runTotal_ = 0;
@@ -161,6 +162,7 @@ void Game::trackMission() {
         transportCounted_ = false;
         callStartCollisions_ = collisions_.collisions();
         callStartRedLights_ = redLightCamera_.violations();
+        callStartWrongTurns_ = routeGuide_.wrongTurns();
         callRouteLength_ = routeGuide_.remaining();
     }
     // Patient on board: the hospital leg adds its own shortest route.
@@ -184,6 +186,7 @@ void Game::trackMission() {
         lastReport_.delivered = arrived && transportCounted_;
         lastReport_.collisions = collisions_.collisions() - callStartCollisions_;
         lastReport_.redLights = redLightCamera_.violations() - callStartRedLights_;
+        lastReport_.wrongTurns = routeGuide_.wrongTurns() - callStartWrongTurns_;
         lastScore_ = Scoring::score(lastReport_);
         runTotal_ += lastScore_.total;
         bestScore_ = std::max(bestScore_, runTotal_);
@@ -247,6 +250,7 @@ BannerData Game::bannerData() const {
         case Mission::State::Missed:    b.phase = BannerData::Phase::Missed; break;
     }
     b.treatment = mission_.treatmentProgress();
+    b.recalculating = routeGuide_.recalculating();
     b.delivered = Mission::needsHospital(mission_.type());
     b.incidentType = static_cast<int>(mission_.type());
     b.metresToGo = Hud::metres(routeGuide_.remaining());

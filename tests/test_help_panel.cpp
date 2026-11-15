@@ -1,6 +1,7 @@
 #include "Check.h"
 #include "ui/HelpPanel.h"
 #include "ui/ObjectiveBanner.h"
+#include "simulation/Incidents.h"
 #include "ui/PixelFont.h"
 
 namespace {
@@ -87,6 +88,13 @@ void bannerFollowsTheMission() {
     CHECK(ObjectiveBanner::text(transport).instruction == "PATIENT ON BOARD, FOLLOW THE ROUTE");
     transport.nearScene = true;
     CHECK(ObjectiveBanner::text(transport).instruction == "STOP IN THE HOSPITAL BAY");
+
+    BannerData lost;
+    lost.metresToGo = 300;
+    lost.recalculating = true;
+    CHECK(ObjectiveBanner::text(lost).instruction == "WRONG TURN - RECALCULATING ROUTE");
+    lost.incidentType = static_cast<int>(IncidentType::Cardiac);
+    CHECK(ObjectiveBanner::text(lost).headline == "CARDIAC ARREST - 300 M TO GO");
 
     BannerData fire;
     fire.incidentType = 1;

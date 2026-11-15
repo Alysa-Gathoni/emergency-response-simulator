@@ -12,21 +12,6 @@ constexpr float MinSpawnDistance = 400.0f;   // never right next to the ambulanc
 constexpr float MaxSpawnDistance = 1500.0f;  // and reachable within the time limit
 constexpr float ResultPause = 2.5f;
 
-struct IncidentInfo {
-    Rgba colour;
-    float timeLimit;   // seconds to reach the scene
-    float treatment;   // seconds on scene
-};
-
-IncidentInfo infoFor(IncidentType type) {
-    switch (type) {
-        case IncidentType::Medical:  return {Rgba(235, 70, 70), 60.0f, 3.0f};
-        case IncidentType::Fire:     return {Rgba(245, 150, 40), 50.0f, 2.0f};
-        case IncidentType::Accident: return {Rgba(240, 210, 60), 70.0f, 4.0f};
-    }
-    return {Rgba::White, 60.0f, 3.0f};
-}
-
 const Rgba HospitalColour(90, 170, 255);
 
 // Arc of the midpoint circle from 12 o'clock, clockwise, `progress` of the way.
@@ -52,7 +37,7 @@ Mission::Mission(std::vector<Point> spawnPoints, Point hospital, unsigned seed)
 
 void Mission::nextIncident(Point ambulancePosition) {
     std::uniform_int_distribution<int> pick(0, static_cast<int>(spawnPoints_.size()) - 1);
-    std::uniform_int_distribution<int> kind(0, 2);
+    std::uniform_real_distribution<float> kind(0.0f, 1.0f);
 
     // Different from the last one and not too close to the ambulance.
     int candidate = pick(rng_);
@@ -64,13 +49,13 @@ void Mission::nextIncident(Point ambulancePosition) {
     }
 
     currentSpawn_ = candidate;
-    type_ = static_cast<IncidentType>(kind(rng_));
+    type_ = pickIncident(kind(rng_));
     marker_.setPosition(spawnPoints_[candidate]);
-    marker_.setColour(infoFor(type_).colour);
+    marker_.setColour(incidentInfo(type_).colour);
     state_ = State::EnRoute;
     elapsed_ = 0.0f;
     firstLeg_ = 0.0f;
-    legLimit_ = infoFor(type_).timeLimit;
+    legLimit_ = incidentInfo(type_).timeLimit;
     hold_ = 0.0f;
     treatment_ = 0.0f;
 }
@@ -197,9 +182,9 @@ Mission::State Mission::state() const { return state_; }
 bool Mission::driving() const { return state_ == State::EnRoute || state_ == State::Transport; }
 bool Mission::finished() const { return state_ == State::Completed || state_ == State::Missed; }
 IncidentType Mission::type() const { return type_; }
-bool Mission::needsHospital(IncidentType type) { return type != IncidentType::Fire; }
+bool Mission::needsHospital(IncidentType type) { return incidentInfo(type).needsHospital; }
 Rgba Mission::colour() const {
-    return state_ == State::Transport ? HospitalColour : infoFor(type_).colour;
+    return state_ == State::Transport ? HospitalColour : incidentInfo(type_).colour;
 }
 Point Mission::incidentPosition() const { return marker_.position(); }
 Point Mission::hospitalPosition() const { return hospital_; }
@@ -213,7 +198,7 @@ float Mission::drivingTime() const {
 }
 float Mission::distanceRemaining() const { return distance_; }
 float Mission::holdProgress() const { return std::min(1.0f, hold_ / HoldTime); }
-float Mission::treatmentTime() const { return infoFor(type_).treatment; }
+float Mission::treatmentTime() const { return incidentInfo(type_).treatment; }
 float Mission::treatmentProgress() const {
     return std::min(1.0f, treatment_ / std::max(0.01f, treatmentTime()));
 }

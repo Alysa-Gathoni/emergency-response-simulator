@@ -1,4 +1,5 @@
 #include "Check.h"
+#include "simulation/Incidents.h"
 #include "simulation/Scoring.h"
 
 namespace {
@@ -6,6 +7,30 @@ namespace {
 void parTimeFollowsRouteLength() {
     CHECK_NEAR(Scoring::parTime(0.0f), Scoring::StopAllowance, 1e-4f);
     CHECK_NEAR(Scoring::parTime(900.0f), 900.0f / Scoring::ParSpeed + Scoring::StopAllowance, 1e-4f);
+}
+
+void wrongTurnsAndNewCalls() {
+    MissionReport r;
+    r.arrived = true;
+    r.incidentType = static_cast<int>(IncidentType::Cardiac);
+    r.routeLength = 0.0f;
+    r.elapsed = 100.0f;
+    r.wrongTurns = 2;
+    const auto s = Scoring::score(r);
+    CHECK(s.base == 600);
+    CHECK(s.wrongTurnPenalty == 2 * Scoring::WrongTurnPenalty);
+    CHECK(s.total == 600 - 40);
+
+    // Weighted choice covers every type and the weights sum to 1.
+    float sum = 0.0f;
+    for (int i = 0; i < IncidentTypeCount; ++i) sum += incidentInfo(i).weight;
+    CHECK_NEAR(sum, 1.0f, 1e-5f);
+    CHECK(pickIncident(0.0f) == IncidentType::Medical);
+    CHECK(pickIncident(0.31f) == IncidentType::Fire);
+    CHECK(pickIncident(0.80f) == IncidentType::Cardiac);
+    CHECK(pickIncident(0.99f) == IncidentType::Maternity);
+    CHECK(!incidentInfo(IncidentType::Fire).needsHospital);
+    CHECK(incidentInfo(IncidentType::Maternity).needsHospital);
 }
 
 void twoLegsGetTwoStops() {
@@ -86,6 +111,7 @@ void grades() {
 }
 
 int main() {
+    wrongTurnsAndNewCalls();
     twoLegsGetTwoStops();
     parTimeFollowsRouteLength();
     cleanFastRun();

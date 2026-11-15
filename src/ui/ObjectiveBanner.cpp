@@ -1,5 +1,6 @@
 #include "ObjectiveBanner.h"
 #include "PixelFont.h"
+#include "../simulation/Incidents.h"
 #include "../polygons/Polygon.h"
 #include "../rasterization/PolygonFill.h"
 #include <algorithm>
@@ -13,8 +14,6 @@ const Rgba Instruction(230, 234, 238);
 const Rgba Success(90, 230, 120);
 const Rgba Failure(250, 90, 70);
 
-const char* CallNames[] = {"MEDICAL CALL", "FIRE CALL", "ROAD CRASH"};
-const Rgba CallColours[] = {{235, 70, 70}, {245, 150, 40}, {240, 210, 60}};
 
 constexpr int Scale = 2;
 constexpr float Padding = 14.0f;
@@ -29,14 +28,14 @@ std::vector<Point> rect(float l, float t, float r, float b) {
 }
 
 ObjectiveBanner::Lines ObjectiveBanner::text(const BannerData& d) {
-    const int type = std::clamp(d.incidentType, 0, 2);
+    const std::string call = incidentInfo(d.incidentType).callName;
     switch (d.phase) {
         case BannerData::Phase::Arrived:
             return {std::string(d.delivered ? "PATIENT DELIVERED IN " : "ARRIVED IN ")
                         + std::to_string(static_cast<int>(std::lround(d.responseTime))) + " S",
                     "NEXT CALL COMING UP"};
         case BannerData::Phase::OnScene:
-            return {std::string(CallNames[type]) + " - ON SCENE",
+            return {call + " - ON SCENE",
                     "CREW AT WORK, STAY STOPPED "
                         + std::to_string(static_cast<int>(std::lround(std::clamp(d.treatment, 0.0f, 1.0f) * 100.0f)))
                         + "%"};
@@ -44,6 +43,7 @@ ObjectiveBanner::Lines ObjectiveBanner::text(const BannerData& d) {
             const std::string headline = "TO HOSPITAL - "
                 + std::to_string(std::max(0, d.metresToGo)) + " M TO GO";
             if (d.holding) return {headline, "HOLD STILL..."};
+            if (d.recalculating) return {headline, "WRONG TURN - RECALCULATING ROUTE"};
             if (d.nearScene) return {headline, "STOP IN THE HOSPITAL BAY"};
             return {headline, "PATIENT ON BOARD, FOLLOW THE ROUTE"};
         }
@@ -53,9 +53,10 @@ ObjectiveBanner::Lines ObjectiveBanner::text(const BannerData& d) {
             break;
     }
 
-    const std::string headline = std::string(CallNames[type]) + " - "
+    const std::string headline = call + " - "
                                + std::to_string(std::max(0, d.metresToGo)) + " M TO GO";
     if (d.holding) return {headline, "HOLD STILL..."};
+    if (d.recalculating) return {headline, "WRONG TURN - RECALCULATING ROUTE"};
     if (d.nearScene) return {headline, "SLOW DOWN AND STOP ON THE MARKER"};
     return {headline, "FOLLOW THE ROUTE, STOP AT THE MARKER"};
 }
@@ -78,7 +79,7 @@ void ObjectiveBanner::draw(IRenderer& target, const LineRenderer& lines,
     PolygonFill::draw(target, rect(left, Top, right, bottom), lines, Panel, false);
     Polygon(rect(left, Top, right, bottom)).drawOutline(target, lines, Frame, 1.0f);
 
-    Rgba headlineColour = CallColours[std::clamp(d.incidentType, 0, 2)];
+    Rgba headlineColour = incidentInfo(d.incidentType).colour;
     if (d.phase == BannerData::Phase::Transport) headlineColour = Rgba(90, 170, 255);
     if (d.phase == BannerData::Phase::Arrived) headlineColour = Success;
     if (d.phase == BannerData::Phase::Missed) headlineColour = Failure;
@@ -90,5 +91,5 @@ void ObjectiveBanner::draw(IRenderer& target, const LineRenderer& lines,
                         Scale, headlineColour);
     PixelFont::drawText(target, t.instruction,
                         {left + (width - PixelFont::textWidth(t.instruction, Scale)) * 0.5f, y2},
-                        Scale, d.holding ? Success : Instruction);
+                        Scale, d.holding ? Success : d.recalculating ? Failure : Instruction);
 }
