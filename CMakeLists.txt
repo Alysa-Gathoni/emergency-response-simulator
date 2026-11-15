@@ -55,6 +55,7 @@ add_executable(EmergencyResponseSimulator
     src/simulation/VehicleType.cpp
     src/ui/HelpPanel.cpp
     src/ui/Hud.cpp
+    src/ui/Minimap.cpp
     src/ui/ObjectiveBanner.cpp
     src/ui/PixelFont.cpp
     src/ui/Screens.cpp
@@ -354,3 +355,24 @@ add_executable(test_congestion
 )
 target_include_directories(test_congestion PRIVATE src)
 add_test(NAME congestion COMMAND test_congestion)
+
+add_executable(test_minimap
+    tests/test_minimap.cpp
+    src/ui/Minimap.cpp
+    src/city/City.cpp
+    src/city/RoadNetwork.cpp
+    src/core/Mat3.cpp
+    src/curves/Bezier.cpp
+    src/curves/CatmullRom.cpp
+    src/curves/Spline.cpp
+    src/lines/LineAlgorithms.cpp
+    src/lines/LineRenderer.cpp
+    src/polygons/Polygon.cpp
+    src/polygons/Transformations.cpp
+    src/polygons/Triangulation.cpp
+    src/rasterization/Clipping.cpp
+    src/rasterization/PolygonFill.cpp
+    src/shapes/CircleEllipse.cpp
+)
+target_include_directories(test_minimap PRIVATE src)
+add_test(NAME minimap COMMAND test_minimap)
